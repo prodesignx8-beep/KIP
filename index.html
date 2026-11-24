@@ -15,8 +15,9 @@
   <style>
     @media print {
       body * { visibility: hidden; }
-      #modal-rapor, #modal-rapor > div, #print-area, #print-area * { visibility: visible; }
-      #modal-rapor {
+      #modal-rapor, #modal-rapor > div, #print-area, #print-area *,
+      #modal-rekap-tim, #modal-rekap-tim > div, #print-area-rekap, #print-area-rekap * { visibility: visible; }
+      #modal-rapor, #modal-rekap-tim {
         position: absolute !important;
         left: 0 !important;
         top: 0 !important;
@@ -26,13 +27,13 @@
         background: white !important;
         align-items: flex-start !important;
       }
-      #modal-rapor > div {
+      #modal-rapor > div, #modal-rekap-tim > div {
         box-shadow: none !important;
         border-radius: 0 !important;
         max-width: none !important;
         width: 100% !important;
       }
-      #print-area {
+      #print-area, #print-area-rekap {
         position: relative !important;
         width: 100% !important;
         padding: 0 !important;
@@ -447,9 +448,14 @@
                   <label class="block text-xs font-medium text-slate-600 mb-1">Berdasarkan Karyawan</label>
                   <select id="lap-karyawan" class="w-full border border-slate-300 rounded p-2 text-sm outline-none focus:border-blue-500 bg-white"></select>
                 </div>
-                <button onclick="generateRecapText()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg mt-2 shadow text-sm flex items-center justify-center gap-2 transition">
-                  <i data-lucide="file-text" class="w-4 h-4"></i> Buat Teks Rekap
-                </button>
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                  <button onclick="generateRecapText()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg shadow text-xs flex items-center justify-center gap-2 transition">
+                    <i data-lucide="align-left" class="w-4 h-4"></i> Buat Teks
+                  </button>
+                  <button onclick="generateRekapPDF()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg shadow text-xs flex items-center justify-center gap-2 transition">
+                    <i data-lucide="file-text" class="w-4 h-4"></i> Dokumen PDF
+                  </button>
+                </div>
               </div>
 
               <!-- Channel & Send Section -->
@@ -564,10 +570,11 @@
     <div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
       <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 no-print">
         <h3 class="font-bold text-lg text-slate-800">Pratinjau Rapor Kinerja</h3>
-        <div class="space-x-2">
-          <button onclick="downloadPDF()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"><i data-lucide="download" class="w-4 h-4 inline-block mr-1"></i> Unduh PDF</button>
-          <button onclick="window.print()" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition"><i data-lucide="printer" class="w-4 h-4 inline-block mr-1"></i> Cetak</button>
-          <button onclick="closeRaporModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-300 transition">Tutup</button>
+        <div class="space-x-2 flex items-center">
+          <button onclick="sharePDF()" class="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition"><i data-lucide="share-2" class="w-4 h-4 inline-block mr-1"></i> Bagikan (WA/TG)</button>
+          <button onclick="downloadPDF()" class="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"><i data-lucide="download" class="w-4 h-4 inline-block mr-1"></i> Unduh</button>
+          <button onclick="window.print()" class="px-3 py-2 bg-slate-800 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition"><i data-lucide="printer" class="w-4 h-4 inline-block mr-1"></i> Cetak</button>
+          <button onclick="closeRaporModal()" class="px-3 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-300 transition">Tutup</button>
         </div>
       </div>
       <div id="print-area" class="p-8 overflow-y-auto flex-1 text-slate-800">
@@ -614,6 +621,60 @@
         <div class="flex justify-between mt-16 pt-8 text-sm text-center">
           <div class="w-48"><p class="mb-16">Dibuat Oleh,</p><p class="font-bold border-t border-slate-400 pt-1">Atasan Langsung / HR</p></div>
           <div class="w-48"><p class="mb-16">Disetujui Oleh,</p><p class="font-bold border-t border-slate-400 pt-1">Karyawan Bersangkutan</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL REKAP TIM PDF ==================== -->
+  <div id="modal-rekap-tim" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 no-print">
+        <h3 class="font-bold text-lg text-slate-800">Pratinjau Dokumen Rekap Tim</h3>
+        <div class="space-x-2 flex items-center">
+          <button onclick="shareRekapPDF()" class="px-3 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 transition"><i data-lucide="share-2" class="w-4 h-4 inline-block mr-1"></i> Bagikan (WA/TG)</button>
+          <button onclick="downloadRekapPDF()" class="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"><i data-lucide="download" class="w-4 h-4 inline-block mr-1"></i> Unduh</button>
+          <button onclick="window.print()" class="px-3 py-2 bg-slate-800 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition"><i data-lucide="printer" class="w-4 h-4 inline-block mr-1"></i> Cetak</button>
+          <button onclick="closeRekapModal()" class="px-3 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-300 transition">Tutup</button>
+        </div>
+      </div>
+      <div id="print-area-rekap" class="p-8 overflow-y-auto flex-1 text-slate-800">
+        <div class="text-center mb-8 border-b-2 border-slate-800 pb-4">
+          <h1 class="text-2xl font-black uppercase tracking-wider">Laporan Rekapitulasi Kinerja Tim</h1>
+          <div class="flex justify-between text-sm mt-4 font-medium">
+            <span id="pdf-rekap-periode">Periode: -</span>
+            <span id="pdf-rekap-date">Dicetak: -</span>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-6 mb-8 text-sm">
+          <div>
+            <table class="w-full">
+              <tr><td class="py-1 text-slate-500 w-32">Filter Divisi</td><td class="py-1 font-bold" id="pdf-rekap-divisi">-</td></tr>
+            </table>
+          </div>
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 text-center">
+            <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Rata-Rata Skor Keseluruhan</div>
+            <div id="pdf-rekap-skor" class="text-3xl font-black text-blue-700">0%</div>
+          </div>
+        </div>
+
+        <table class="w-full text-sm text-left mb-8 border border-slate-300">
+          <thead class="bg-slate-800 text-white border-b border-slate-300">
+            <tr>
+              <th class="p-2 border-r border-slate-600 text-center w-12">No</th>
+              <th class="p-2 border-r border-slate-600">Nama Karyawan</th>
+              <th class="p-2 border-r border-slate-600 text-center w-24">Skor KPI</th>
+              <th class="p-2 border-r border-slate-600 text-center w-24">Skor Komp</th>
+              <th class="p-2 border-r border-slate-600 text-center w-24">Skor Akhir</th>
+              <th class="p-2 text-center w-32">Status</th>
+            </tr>
+          </thead>
+          <tbody id="pdf-rekap-rows" class="divide-y divide-slate-300 border-b border-slate-300"></tbody>
+        </table>
+        
+        <div class="flex justify-end mt-16 pt-8 text-sm text-center">
+          <div class="w-56"><p class="mb-16">Disetujui Oleh,</p><p class="font-bold border-t border-slate-400 pt-1">HR & General Affairs</p></div>
         </div>
       </div>
     </div>
@@ -837,6 +898,7 @@
     let chartDivisiInstance = null;
     let cachedSettings = {};
     let isDashboardVisible = false;
+    let currentRekapTimData = null; // Cache untuk file share
 
     lucide.createIcons();
 
@@ -1153,7 +1215,13 @@
       const rep = currentAnalyticsCache.employeeReports.find(r => r.ID_Karyawan === idKaryawan);
       if (!rep) return;
       const text = formatMsgFrontend(rep, currentAnalyticsCache.rangeType);
-      const phone = rep.No_WA ? rep.No_WA.replace(/[^0-9]/g, '') : '';
+      
+      const phoneRaw = rep.No_WA ? String(rep.No_WA) : '';
+      let phone = phoneRaw.replace(/[^0-9]/g, '');
+      if (phone.startsWith('0')) {
+        phone = '62' + phone.substring(1);
+      }
+      
       const url = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}` : `https://wa.me/?text=${encodeURIComponent(text)}`;
       window.open(url, '_blank');
     }
@@ -1178,6 +1246,8 @@
     function openRaporModal(idKaryawan) {
       const rep = currentAnalyticsCache.employeeReports.find(r => r.ID_Karyawan === idKaryawan);
       if (!rep) return;
+      
+      currentRaporEmp = rep;
 
       document.getElementById('pdf-periode').innerText = 'Periode: ' + currentAnalyticsCache.rangeType;
       document.getElementById('pdf-date').innerText = 'Dicetak: ' + new Date().toLocaleDateString('id-ID');
@@ -1278,6 +1348,78 @@
       });
     }
 
+    function sharePDF() {
+      const modal = document.getElementById('modal-rapor');
+      const modalBox = modal.children[0]; 
+      const printArea = document.getElementById('print-area');
+      
+      modal.classList.remove('items-center', 'justify-center', 'flex');
+      modal.classList.add('block');
+      modalBox.classList.remove('max-h-[90vh]', 'overflow-hidden');
+      printArea.classList.remove('overflow-y-auto', 'flex-1');
+      modalBox.style.width = '800px';
+      modalBox.style.maxWidth = '100%';
+
+      const namaLengkap = document.getElementById('pdf-nama').innerText.split(' (')[0];
+      const periode = document.getElementById('pdf-periode').innerText.replace('Periode: ', '').trim();
+      const fileName = `Rapor_Kinerja_${namaLengkap.replace(/\s+/g, '_')}_${periode}.pdf`;
+
+      const opt = {
+        margin:       10, 
+        filename:     fileName,
+        image:        { type: 'jpeg', quality: 1.0 },
+        html2canvas:  { scale: 2, useCORS: true, scrollY: 0, scrollX: 0 },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      showLoader('Menyiapkan dokumen untuk dibagikan...');
+
+      html2pdf().set(opt).from(printArea).output('blob').then(blob => {
+        // Kembalikan Layout
+        modal.classList.add('flex', 'items-center', 'justify-center');
+        modal.classList.remove('block');
+        modalBox.classList.add('max-h-[90vh]', 'overflow-hidden');
+        printArea.classList.add('overflow-y-auto', 'flex-1');
+        modalBox.style.width = '';
+        modalBox.style.maxWidth = '';
+        hideLoader();
+
+        const file = new File([blob], fileName, { type: 'application/pdf' });
+        const textMsg = currentRaporEmp ? formatMsgFrontend(currentRaporEmp, periode) : 'Berikut Rapor Kinerja Anda.';
+
+        // Gunakan Web Share API jika didukung (Browser HP / MacOS)
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          navigator.share({
+            title: 'Rapor Kinerja ' + namaLengkap,
+            text: textMsg,
+            files: [file]
+          }).then(() => {
+            showToast('Membuka menu aplikasi perangkat...');
+          }).catch(err => console.error(err));
+        } else {
+          // Fallback jika dibuka di Browser PC Windows yang belum mendukung File Share API
+          showToast('Browser PC ini tidak mendukung Share File instan. PDF diunduh otomatis. Silakan lampirkan manual.');
+          
+          // Unduh File
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          a.click();
+          URL.revokeObjectURL(url);
+
+          // Tetap Buka WA
+          setTimeout(() => {
+             const phoneRaw = currentRaporEmp && currentRaporEmp.No_WA ? String(currentRaporEmp.No_WA) : '';
+             let phone = phoneRaw.replace(/[^0-9]/g, '');
+             if (phone.startsWith('0')) phone = '62' + phone.substring(1);
+             const waUrl = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(textMsg)}` : `https://wa.me/?text=${encodeURIComponent(textMsg)}`;
+             window.open(waUrl, '_blank');
+          }, 2000);
+        }
+      });
+    }
+
     // ==================== FITUR KIRIM LAPORAN MASSAL ====================
     function loadLaporanTab() {
       updateLapKaryawanOptions();
@@ -1345,6 +1487,152 @@
         url = `https://t.me/share/url?url=${encodeURIComponent(text)}`;
       }
       window.open(url, '_blank');
+    }
+
+    // ==================== FITUR DOKUMEN REKAP TIM ====================
+    function generateRekapPDF() {
+      const filters = {
+        rangeType: document.getElementById('lap-range').value,
+        divisi: document.getElementById('lap-divisi').value,
+        idKaryawan: document.getElementById('lap-karyawan').value
+      };
+      
+      showLoader('Menyiapkan dokumen rekap...');
+      google.script.run.withSuccessHandler(data => {
+        hideLoader();
+        if(data.employeeReports.length === 0) {
+          showToast('Tidak ada data karyawan yang cocok.');
+          return;
+        }
+        
+        currentRekapTimData = { ...data, filters };
+
+        document.getElementById('pdf-rekap-periode').innerText = 'Periode: ' + data.rangeType;
+        document.getElementById('pdf-rekap-date').innerText = 'Dicetak: ' + new Date().toLocaleDateString('id-ID');
+        document.getElementById('pdf-rekap-divisi').innerText = filters.divisi === 'ALL' ? 'Semua Divisi' : filters.divisi;
+        document.getElementById('pdf-rekap-skor').innerText = data.overallScore + '%';
+
+        // Sort data berdasarkan Divisi kemudian Nama
+        const sortedReports = data.employeeReports.sort((a, b) => {
+           const divCmp = a.Divisi.localeCompare(b.Divisi);
+           if (divCmp !== 0) return divCmp;
+           return a.Nama.localeCompare(b.Nama);
+        });
+
+        const tbody = document.getElementById('pdf-rekap-rows');
+        tbody.innerHTML = '';
+        let currentDiv = '';
+
+        sortedReports.forEach((rep, idx) => {
+          // Tambahkan header pemisah jika divisi berubah
+          if (rep.Divisi !== currentDiv && filters.divisi === 'ALL') {
+             currentDiv = rep.Divisi;
+             tbody.innerHTML += `<tr><td colspan="6" class="p-2 bg-slate-200 font-bold border border-slate-300 text-left">${currentDiv}</td></tr>`;
+          }
+
+          tbody.innerHTML += `
+            <tr>
+              <td class="p-2 border border-slate-300 text-center">${idx + 1}</td>
+              <td class="p-2 border border-slate-300 font-medium">${rep.Nama}</td>
+              <td class="p-2 border border-slate-300 text-center">${rep.Total_Skor_KPI}%</td>
+              <td class="p-2 border border-slate-300 text-center">${rep.Skor_Kompetensi}%</td>
+              <td class="p-2 border border-slate-300 text-center font-bold text-blue-700">${rep.Skor_Akhir}%</td>
+              <td class="p-2 border border-slate-300 text-center text-xs font-semibold">${rep.Status_Label}</td>
+            </tr>
+          `;
+        });
+
+        document.getElementById('modal-rekap-tim').classList.remove('hidden');
+      }).getDashboardAnalytics(filters);
+    }
+
+    function closeRekapModal() {
+      document.getElementById('modal-rekap-tim').classList.add('hidden');
+    }
+
+    function _generateRekapPDFBlob(callback) {
+      const modal = document.getElementById('modal-rekap-tim');
+      const modalBox = modal.children[0]; 
+      const printArea = document.getElementById('print-area-rekap');
+      
+      modal.classList.remove('items-center', 'justify-center', 'flex');
+      modal.classList.add('block');
+      modalBox.classList.remove('max-h-[90vh]', 'overflow-hidden');
+      printArea.classList.remove('overflow-y-auto', 'flex-1');
+      modalBox.style.width = '800px';
+      modalBox.style.maxWidth = '100%';
+
+      const periode = document.getElementById('pdf-rekap-periode').innerText.replace('Periode: ', '').trim();
+      const divisi = document.getElementById('pdf-rekap-divisi').innerText;
+      const fileName = `Rekap_Kinerja_${divisi.replace(/\s+/g, '_')}_${periode}.pdf`;
+
+      const opt = {
+        margin:       10, 
+        filename:     fileName,
+        image:        { type: 'jpeg', quality: 1.0 },
+        html2canvas:  { scale: 2, useCORS: true, scrollY: 0, scrollX: 0 },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      showLoader('Memproses dokumen...');
+
+      html2pdf().set(opt).from(printArea).output('blob').then(blob => {
+        // Restore Layout
+        modal.classList.add('flex', 'items-center', 'justify-center');
+        modal.classList.remove('block');
+        modalBox.classList.add('max-h-[90vh]', 'overflow-hidden');
+        printArea.classList.add('overflow-y-auto', 'flex-1');
+        modalBox.style.width = '';
+        modalBox.style.maxWidth = '';
+        hideLoader();
+        
+        callback(blob, fileName, periode, divisi);
+      }).catch(err => {
+        hideLoader();
+        console.error(err);
+      });
+    }
+
+    function downloadRekapPDF() {
+      _generateRekapPDFBlob((blob, fileName) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('Dokumen Rekap berhasil diunduh!');
+      });
+    }
+
+    function shareRekapPDF() {
+      _generateRekapPDFBlob((blob, fileName, periode, divisi) => {
+        const file = new File([blob], fileName, { type: 'application/pdf' });
+        const textMsg = `Berikut adalah Laporan Rekapitulasi Kinerja Tim untuk periode ${periode} (Divisi: ${divisi}). Rata-rata Skor: ${currentRekapTimData ? currentRekapTimData.overallScore + '%' : 'Terlampir'}.`;
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          navigator.share({
+            title: 'Rekap Kinerja Tim ' + periode,
+            text: textMsg,
+            files: [file]
+          }).then(() => {
+            showToast('Membuka menu aplikasi perangkat...');
+          }).catch(err => console.error(err));
+        } else {
+          showToast('Browser PC ini tidak mendukung Share File instan. PDF diunduh otomatis. Silakan lampirkan manual.');
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = fileName;
+          a.click();
+          URL.revokeObjectURL(url);
+
+          setTimeout(() => {
+             const waUrl = `https://wa.me/?text=${encodeURIComponent(textMsg)}`;
+             window.open(waUrl, '_blank');
+          }, 2000);
+        }
+      });
     }
 
     function executeBulkSend() {
