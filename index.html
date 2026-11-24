@@ -148,7 +148,10 @@
           <i data-lucide="send" class="w-5 h-5"></i> Kirim Laporan Massal
         </button>
         <button data-tab="users" onclick="switchTab('users')" class="nav-btn role-admin w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 text-sm font-medium transition">
-          <i data-lucide="users" class="w-5 h-5"></i> Manajemen Pengguna
+          <i data-lucide="users" class="w-5 h-5"></i> Data & Input Karyawan
+        </button>
+        <button data-tab="master-org" onclick="switchTab('master-org')" class="nav-btn role-admin w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 text-sm font-medium transition">
+          <i data-lucide="building-2" class="w-5 h-5"></i> Master Divisi & Jabatan
         </button>
         <button data-tab="settings" onclick="switchTab('settings')" class="nav-btn role-admin w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 text-sm font-medium transition">
           <i data-lucide="settings" class="w-5 h-5"></i> Pengaturan API
@@ -485,31 +488,69 @@
         <section id="tab-users" class="tab-section hidden space-y-6">
            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 lg:col-span-1">
-              <h3 class="text-sm font-bold text-slate-700 mb-4">Tambah / Edit Pengguna</h3>
-              <form id="form-user" onsubmit="submitUser(event)" class="space-y-3 text-sm">
-                <div><label class="block text-slate-600 mb-1">ID Karyawan</label><input type="text" id="usr-id" required class="w-full border border-slate-300 rounded p-2 transition-colors"></div>
-                <div><label class="block text-slate-600 mb-1">Nama Lengkap</label><input type="text" id="usr-nama" required class="w-full border border-slate-300 rounded p-2"></div>
-                <div><label class="block text-slate-600 mb-1">Password</label><input type="password" id="usr-pass" class="w-full border border-slate-300 rounded p-2" placeholder="Kosongkan jika tidak diubah"></div>
-                <div class="grid grid-cols-2 gap-3">
-                  <div><label class="block text-slate-600 mb-1">Role</label><select id="usr-role" class="w-full border border-slate-300 rounded p-2"><option>Karyawan</option><option>Manajer</option><option>Super Admin</option></select></div>
-                  <div><label class="block text-slate-600 mb-1">Divisi</label><input type="text" id="usr-divisi" required class="w-full border border-slate-300 rounded p-2"></div>
-                </div>
-                <div><label class="block text-slate-600 mb-1">No WhatsApp</label><input type="text" id="usr-wa" placeholder="628..." class="w-full border border-slate-300 rounded p-2"></div>
-                <div><label class="block text-slate-600 mb-1">Chat ID Telegram</label><input type="text" id="usr-tg" class="w-full border border-slate-300 rounded p-2"></div>
-                <div><label class="block text-slate-600 mb-1">Email</label><input type="email" id="usr-email" class="w-full border border-slate-300 rounded p-2"></div>
+              <h3 class="text-sm font-bold text-slate-800 mb-4 border-b border-slate-200 pb-2">Tambah / Edit Data Karyawan</h3>
+              <form id="form-user" onsubmit="submitUser(event)" class="space-y-4 text-sm">
                 
-                <div class="grid grid-cols-2 gap-2 mt-4" id="usr-btn-group">
-                  <button type="button" id="btn-reset-user" onclick="resetUserForm()" class="hidden w-full bg-slate-200 hover:bg-slate-300 text-slate-700 rounded p-2 font-medium transition text-xs">Batal / Baru</button>
-                  <button type="submit" id="btn-submit-user" class="col-span-2 w-full bg-slate-900 hover:bg-slate-800 text-white rounded p-2 font-medium transition text-sm">Simpan Pengguna</button>
+                <!-- Grup Data Utama -->
+                <div class="p-3 border border-slate-200 rounded-lg bg-slate-50 space-y-3">
+                  <h4 class="font-bold text-slate-700 text-xs uppercase tracking-wider mb-2">1. Data Utama</h4>
+                  <div><label class="block text-slate-600 mb-1">ID Karyawan</label><input type="text" id="usr-id" required class="w-full border border-slate-300 rounded p-2 transition-colors" placeholder="Contoh: EMP005"></div>
+                  <div><label class="block text-slate-600 mb-1">Nama Lengkap</label><input type="text" id="usr-nama" required class="w-full border border-slate-300 rounded p-2" placeholder="Nama sesuai KTP/Sistem"></div>
+                </div>
+
+                <!-- Grup Jabatan & Hak Akses -->
+                <div class="p-3 border border-slate-200 rounded-lg bg-slate-50 space-y-3">
+                  <h4 class="font-bold text-slate-700 text-xs uppercase tracking-wider mb-2">2. Jabatan & Akses Login</h4>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-slate-600 mb-1">Divisi / Dep.</label><select id="usr-divisi" required class="w-full border border-slate-300 rounded p-2 bg-white"></select></div>
+                    <div><label class="block text-slate-600 mb-1">Role / Hak Akses</label><select id="usr-role" onchange="handleRoleAccessChange()" required class="w-full border border-slate-300 rounded p-2 bg-white"></select></div>
+                  </div>
+                  <div id="usr-pass-wrapper">
+                    <label class="block text-slate-600 mb-1">Password Login</label>
+                    <input type="password" id="usr-pass" class="w-full border border-slate-300 rounded p-2 bg-white" placeholder="Masukkan password login">
+                    <p class="text-[11px] text-slate-400 mt-1">*Kosongkan saat edit jika tidak ingin mengubah password lama.</p>
+                  </div>
+                  <div id="usr-noaccess-info" class="hidden p-2.5 bg-amber-50 border border-amber-200 rounded text-xs text-amber-800 flex items-center gap-2">
+                    <i data-lucide="lock" class="w-4 h-4 flex-shrink-0"></i>
+                    <span>Karyawan ini berstatus <strong>No Access</strong> (tidak dapat login ke aplikasi, namun tetap terdata di KPI & Laporan).</span>
+                  </div>
+                </div>
+
+                <!-- Grup Kontak & Notifikasi -->
+                <div class="p-3 border border-slate-200 rounded-lg bg-slate-50 space-y-3">
+                  <h4 class="font-bold text-slate-700 text-xs uppercase tracking-wider mb-2">3. Kontak Notifikasi Laporan</h4>
+                  <div><label class="block text-slate-600 mb-1">Alamat Email</label><input type="email" id="usr-email" class="w-full border border-slate-300 rounded p-2" placeholder="email@perusahaan.com"></div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-slate-600 mb-1">Nomor WhatsApp</label><input type="text" id="usr-wa" placeholder="628..." class="w-full border border-slate-300 rounded p-2"></div>
+                    <div><label class="block text-slate-600 mb-1">Chat ID Telegram</label><input type="text" id="usr-tg" class="w-full border border-slate-300 rounded p-2" placeholder="(Opsional)"></div>
+                  </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-2 mt-4 pt-2" id="usr-btn-group">
+                  <button type="button" id="btn-reset-user" onclick="resetUserForm()" class="hidden w-full bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg p-2.5 font-medium transition text-xs">Batal / Tambah Baru</button>
+                  <button type="submit" id="btn-submit-user" class="col-span-2 w-full bg-slate-900 hover:bg-slate-800 text-white rounded-lg p-2.5 font-medium transition text-sm shadow-sm flex items-center justify-center gap-2"><i data-lucide="save" class="w-4 h-4"></i> Simpan Data Karyawan</button>
                 </div>
               </form>
             </div>
-            <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden lg:col-span-2">
-              <div class="p-4 border-b border-slate-100"><h3 class="text-sm font-bold text-slate-700">Daftar Pengguna</h3></div>
-              <div class="overflow-x-auto">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden lg:col-span-2 flex flex-col">
+              <div class="p-4 border-b border-slate-100 flex flex-wrap justify-between items-center gap-2 bg-slate-50">
+                <div>
+                  <h3 class="text-sm font-bold text-slate-800">Daftar Pengguna Sistem</h3>
+                  <p class="text-xs text-slate-500">Total <span id="user-total-badge" class="font-bold text-blue-600">0</span> karyawan terdaftar</p>
+                </div>
+                <button onclick="openAllUsersModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-lg text-xs font-semibold shadow-sm flex items-center gap-1.5 transition">
+                  <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i> Tampilkan Semua Data (Pop-up)
+                </button>
+              </div>
+              <div class="overflow-x-auto flex-1">
                 <table class="w-full text-sm text-left whitespace-nowrap">
-                  <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
-                    <tr><th class="p-3">Karyawan</th><th class="p-3">Role & Divisi</th><th class="p-3">Kontak Notifikasi</th><th class="p-3 text-right">Aksi</th></tr>
+                  <thead class="bg-slate-100 text-slate-600 border-b border-slate-200 uppercase text-xs tracking-wider">
+                    <tr>
+                      <th class="p-3">Karyawan</th>
+                      <th class="p-3">Divisi & Akses</th>
+                      <th class="p-3">Kontak</th>
+                      <th class="p-3 text-right">Aksi</th>
+                    </tr>
                   </thead>
                   <tbody id="table-users-body" class="divide-y divide-slate-100"></tbody>
                 </table>
@@ -518,16 +559,78 @@
           </div>
         </section>
 
-        <!-- SETTINGS TAB -->
+        <!-- MASTER DIVISI & JABATAN TAB -->
+        <section id="tab-master-org" class="tab-section hidden space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+            
+            <!-- KELOLA DIVISI -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex flex-col">
+              <div class="flex items-center gap-2 border-b border-slate-200 pb-3 mb-4">
+                <div class="p-2 bg-blue-100 text-blue-600 rounded-lg"><i data-lucide="layers" class="w-5 h-5"></i></div>
+                <div>
+                  <h3 class="text-base font-bold text-slate-800">Kelola Daftar Divisi</h3>
+                  <p class="text-xs text-slate-500">Tambah atau edit nama departemen/divisi</p>
+                </div>
+              </div>
+              
+              <form onsubmit="saveMasterOrgItem(event, 'DIVISI')" class="flex gap-2 mb-4">
+                <input type="hidden" id="edit-divisi-idx" value="-1">
+                <input type="text" id="input-divisi-name" required placeholder="Nama Divisi Baru..." class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-blue-500">
+                <button type="submit" id="btn-save-divisi" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Tambah</button>
+                <button type="button" id="btn-cancel-divisi" onclick="resetMasterOrgForm('DIVISI')" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition">Batal</button>
+              </form>
+
+              <div class="overflow-y-auto flex-1 border border-slate-200 rounded-lg">
+                <table class="w-full text-sm text-left">
+                  <thead class="bg-slate-50 text-slate-600 border-b border-slate-200 text-xs uppercase">
+                    <tr><th class="p-3">Nama Divisi</th><th class="p-3 text-right">Aksi</th></tr>
+                  </thead>
+                  <tbody id="table-master-divisi" class="divide-y divide-slate-100"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- KELOLA ROLE / JABATAN -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex flex-col">
+              <div class="flex items-center gap-2 border-b border-slate-200 pb-3 mb-4">
+                <div class="p-2 bg-indigo-100 text-indigo-600 rounded-lg"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
+                <div>
+                  <h3 class="text-base font-bold text-slate-800">Kelola Role / Jabatan</h3>
+                  <p class="text-xs text-slate-500">Atur level akses atau nama jabatan karyawan</p>
+                </div>
+              </div>
+              
+              <form onsubmit="saveMasterOrgItem(event, 'ROLE')" class="flex gap-2 mb-4">
+                <input type="hidden" id="edit-role-idx" value="-1">
+                <input type="text" id="input-role-name" required placeholder="Nama Role / Jabatan..." class="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500">
+                <button type="submit" id="btn-save-role" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Tambah</button>
+                <button type="button" id="btn-cancel-role" onclick="resetMasterOrgForm('ROLE')" class="hidden bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition">Batal</button>
+              </form>
+
+              <div class="overflow-y-auto flex-1 border border-slate-200 rounded-lg">
+                <table class="w-full text-sm text-left">
+                  <thead class="bg-slate-50 text-slate-600 border-b border-slate-200 text-xs uppercase">
+                    <tr><th class="p-3">Role / Jabatan</th><th class="p-3 text-right">Aksi</th></tr>
+                  </thead>
+                  <tbody id="table-master-role" class="divide-y divide-slate-100"></tbody>
+                </table>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-3">*Role bawaan sistem (<strong>Super Admin</strong>, <strong>Manajer</strong>, <strong>Karyawan</strong>, dan <strong>No Access</strong>) dikunci agar hak akses aplikasi tidak rusak.</p>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- SETTINGS API TAB -->
         <section id="tab-settings" class="tab-section hidden space-y-6">
-          <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 max-w-3xl mx-auto">
-            <h3 class="text-lg font-bold text-slate-800 mb-1">Konfigurasi Sistem & API</h3>
-            <p class="text-sm text-slate-500 mb-6">Atur token bot, template pesan, dan bobot penilaian skor akhir.</p>
+          <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 max-w-4xl mx-auto">
+            <h2 class="text-xl font-bold text-slate-800 mb-2">Pengaturan API & Konfigurasi Sistem</h2>
+            <p class="text-sm text-slate-500 mb-6">Kelola integrasi WhatsApp, Telegram, Bobot Nilai, dan Template Pesan.</p>
             <form onsubmit="submitSettings(event)" class="space-y-6 text-sm">
               <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- Telegram -->
-                <div class="space-y-3 p-4 border border-blue-100 bg-blue-50/50 rounded-lg">
-                  <h4 class="font-bold text-blue-900 flex items-center gap-2"><i data-lucide="send" class="w-4 h-4"></i> Telegram Bot API</h4>
+                <div class="space-y-3 p-4 border border-sky-100 bg-sky-50/50 rounded-lg">
+                  <h4 class="font-bold text-sky-900 flex items-center gap-2"><i data-lucide="send" class="w-4 h-4"></i> Telegram Bot API</h4>
                   <div><label class="block text-slate-600 mb-1">Bot Token</label><input type="text" id="set-tg-token" class="w-full border border-slate-300 rounded p-2 bg-white"></div>
                   <div><label class="block text-slate-600 mb-1">Group Chat ID (Utk Rekap)</label><input type="text" id="set-tg-group" class="w-full border border-slate-300 rounded p-2 bg-white"></div>
                 </div>
@@ -539,7 +642,7 @@
                   <div><label class="block text-slate-600 mb-1">WA Group ID (Utk Rekap)</label><input type="text" id="set-wa-group" class="w-full border border-slate-300 rounded p-2 bg-white"></div>
                 </div>
               </div>
-              
+
               <div class="p-4 border border-slate-200 rounded-lg space-y-4">
                 <h4 class="font-bold text-slate-900">Bobot Penilaian Kinerja</h4>
                 <div class="grid grid-cols-2 gap-4">
@@ -680,10 +783,92 @@
     </div>
   </div>
 
+  <!-- ==================== MODAL DIREKTORI DATA KARYAWAN KESELURUHAN ==================== -->
+  <div id="modal-all-users" class="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 hidden flex items-center justify-center p-3 md:p-6">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[92vh] overflow-hidden flex flex-col border border-slate-200">
+      <!-- Header Modal -->
+      <div class="p-4 md:p-5 border-b border-slate-200 flex flex-wrap justify-between items-center gap-3 bg-slate-50">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-sm">
+            <i data-lucide="users" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-lg text-slate-800">Direktori Data Karyawan Keseluruhan</h3>
+            <p class="text-xs text-slate-500">Ringkasan seluruh profil karyawan, divisi, hak akses, dan kontak notifikasi</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="exportAllUsersCSV()" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition shadow-sm">
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i> Unduh Excel (CSV)
+          </button>
+          <button onclick="closeAllUsersModal()" class="px-3.5 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg text-xs font-semibold transition">
+            Tutup
+          </button>
+        </div>
+      </div>
+
+      <!-- Ringkasan Statistik & Filter -->
+      <div class="p-4 bg-white border-b border-slate-200 space-y-3">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+          <div class="p-3 rounded-xl bg-blue-50 border border-blue-100">
+            <span class="text-blue-600 font-medium block">Total Karyawan</span>
+            <strong id="modal-usr-stat-total" class="text-xl font-black text-blue-900">0</strong>
+          </div>
+          <div class="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+            <span class="text-emerald-600 font-medium block">Punya Akses Login</span>
+            <strong id="modal-usr-stat-active" class="text-xl font-black text-emerald-900">0</strong>
+          </div>
+          <div class="p-3 rounded-xl bg-amber-50 border border-amber-100">
+            <span class="text-amber-600 font-medium block">Status No Access</span>
+            <strong id="modal-usr-stat-noaccess" class="text-xl font-black text-amber-900">0</strong>
+          </div>
+          <div class="p-3 rounded-xl bg-indigo-50 border border-indigo-100">
+            <span class="text-indigo-600 font-medium block">Jumlah Divisi</span>
+            <strong id="modal-usr-stat-div" class="text-xl font-black text-indigo-900">0</strong>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+          <div class="relative">
+            <input type="text" id="modal-usr-search" oninput="renderAllUsersModalTable()" placeholder="Cari ID, Nama, WA, atau Email..." class="w-full pl-9 pr-3 py-2 border border-slate-300 rounded-lg text-xs outline-none focus:border-blue-500">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
+          </div>
+          <select id="modal-usr-filter-div" onchange="renderAllUsersModalTable()" class="border border-slate-300 rounded-lg px-3 py-2 text-xs bg-slate-50 outline-none focus:border-blue-500">
+            <option value="ALL">Semua Divisi</option>
+          </select>
+          <select id="modal-usr-filter-role" onchange="renderAllUsersModalTable()" class="border border-slate-300 rounded-lg px-3 py-2 text-xs bg-slate-50 outline-none focus:border-blue-500">
+            <option value="ALL">Semua Role / Hak Akses</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Tabel Data Keseluruhan -->
+      <div class="overflow-auto flex-1">
+        <table class="w-full text-xs text-left whitespace-nowrap">
+          <thead class="bg-slate-800 text-white sticky top-0 z-10 uppercase tracking-wider">
+            <tr>
+              <th class="p-3 text-center w-10">No</th>
+              <th class="p-3">ID</th>
+              <th class="p-3">Nama Lengkap</th>
+              <th class="p-3">Divisi</th>
+              <th class="p-3">Role / Jabatan</th>
+              <th class="p-3 text-center">Akses Portal</th>
+              <th class="p-3">No. WhatsApp</th>
+              <th class="p-3">Telegram ID</th>
+              <th class="p-3">Email</th>
+              <th class="p-3 text-right">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="modal-all-users-tbody" class="divide-y divide-slate-200 bg-white"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
   <script>
     // ==================== GAS STANDALONE URL BRIDGE & PREVIEW MOCK ====================
     // Ganti teks "TEMPEL DISINI" dengan URL Web App Apps Script Anda (pastikan tetap di dalam tanda kutip)
-    const GAS_WEB_URL = "https://script.google.com/macros/s/AKfycbwr8gZ-ijfx6L5f-pKZixxrMCD633e4RjtpHPBje3jfDUbBbQZDQrtZ1tPkMFTiErr4/exec";
+    const GAS_WEB_URL = "https://script.google.com/macros/s/AKfycbyA1WKJ9jXXoVd3-eVoYoWWyZWkuzIlDKBYFqTh7PBwQd-OKu-k65sBu0xF1XfIVeh8/exec";
     
     const todayStr = new Date().toISOString().split('T')[0];
     const mockDB = {
@@ -728,22 +913,27 @@
         WA_GROUP_ID: '120363000000@g.us',
         BOBOT_KPI: 70,
         BOBOT_KOMPETENSI: 30,
-        TEMPLATE_PESAN: '*LAPORAN KINERJA ({periode})*\nNama: *{nama}*\nDivisi: {divisi}\nSkor Akhir: *{skor}%* ({status})'
+        TEMPLATE_PESAN: '*LAPORAN KINERJA ({periode})*\nNama: *{nama}*\nDivisi: {divisi}\nSkor Akhir: *{skor}%* ({status})',
+        DAFTAR_DIVISI: 'HR & GA, Sales & Marketing, IT & Digital, Finance, Operasional',
+        DAFTAR_ROLE: 'Karyawan, Manajer, Super Admin, No Access'
       }
     };
 
     const mockHandlers = {
       loginUser(id, pass) {
         const u = mockDB.users.find(x => x.ID_Karyawan.toLowerCase() === String(id).trim().toLowerCase() && x.Password === String(pass).trim());
-        if (!u) return { success: false, message: 'ID Karyawan atau Password salah! (Coba: EMP001 / admin123)' };
+        if (!u) return { success: false, message: 'ID Karyawan atau Password salah!' };
+        if (u.Role === 'No Access') return { success: false, message: 'Akun Anda berstatus No Access dan tidak diizinkan masuk ke aplikasi.' };
         const safe = { ...u }; delete safe.Password;
         return { success: true, user: safe };
       },
       getAllUsers() { return mockDB.users.map(u => { const c = { ...u }; delete c.Password; return c; }); },
       saveUser(d) {
         const idx = mockDB.users.findIndex(u => u.ID_Karyawan === d.ID_Karyawan);
-        if (idx >= 0) mockDB.users[idx] = { ...mockDB.users[idx], ...d, Password: d.Password || mockDB.users[idx].Password };
-        else mockDB.users.push({ ...d, Password: d.Password || '123456' });
+        const isNoAccess = d.Role === 'No Access';
+        const finalPass = isNoAccess ? '' : (d.Password || (idx >= 0 ? mockDB.users[idx].Password : '123456'));
+        if (idx >= 0) mockDB.users[idx] = { ...mockDB.users[idx], ...d, Password: finalPass };
+        else mockDB.users.push({ ...d, Password: finalPass });
         return { success: true, message: '[Mode Demo Offline] Data karyawan disimpan.' };
       },
       deleteUser(id) {
@@ -854,18 +1044,29 @@
           const webAppUrl = GAS_WEB_URL;
           if (webAppUrl && webAppUrl.startsWith('http')) {
             try {
+              // Petakan parameter posisi ke payload sesuai format Code.gs terbaru
+              let payload = {};
+              if (prop === 'loginUser') payload = { id: args[0], password: args[1] };
+              else if (prop === 'deleteUser' || prop === 'deleteMasterKPI') payload = { id: args[0] };
+              else if (args.length > 0 && typeof args[0] === 'object') payload = args[0];
+
               const response = await fetch(webAppUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // text/plain menghindari CORS preflight di GAS
-                body: JSON.stringify({ action: prop, args: args })
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: prop, payload: payload, args: args })
               });
               const json = await response.json();
-              if (json.success) {
-                if (onSuccess) onSuccess(json.data);
-              } else {
+              
+              // Normalisasi format balasan dari Code.gs ({ status: 'success' } atau { success: true })
+              if (json.error) {
                 hideLoader();
                 showToast('Error Server: ' + json.error);
                 if (onFailure) onFailure(new Error(json.error));
+              } else {
+                const normalized = (json.success !== undefined && json.data !== undefined) ? json.data : json;
+                if (normalized && normalized.status === 'success') normalized.success = true;
+                if (normalized && normalized.status === 'error') normalized.success = false;
+                if (onSuccess) onSuccess(normalized);
               }
             } catch (err) {
               hideLoader();
@@ -898,6 +1099,7 @@
     let chartDivisiInstance = null;
     let cachedSettings = {};
     let isDashboardVisible = false;
+    let currentRaporEmp = null;
     let currentRekapTimData = null; // Cache untuk file share
 
     lucide.createIcons();
@@ -1014,6 +1216,7 @@
       else if (tabName === 'kompetensi') loadKompetensiTab();
       else if (tabName === 'laporan') loadLaporanTab();
       else if (tabName === 'users') loadUsersTab();
+      else if (tabName === 'master-org') loadMasterOrgTab();
       else if (tabName === 'settings') loadSettingsTab();
     }
 
@@ -1031,6 +1234,7 @@
       // Tembak API Settings & API Users secara bersamaan (Parallel Execution)
       google.script.run.withSuccessHandler(settings => {
         cachedSettings = settings;
+        updateDynamicDropdowns();
         checkDone();
       }).getSettingsAPI();
 
@@ -1040,8 +1244,51 @@
       }).getAllUsers();
     }
 
+    function updateDynamicDropdowns() {
+      const { divs, roles } = getOrgLists();
+
+      // 1. Dropdown Divisi di Form Input Karyawan
+      const divSelect = document.getElementById('usr-divisi');
+      if (divSelect) {
+        divSelect.innerHTML = '';
+        divs.forEach(d => {
+           divSelect.innerHTML += `<option value="${d}">${d}</option>`;
+        });
+      }
+      
+      // 2. Dropdown Role di Form Input Karyawan
+      const roleSelect = document.getElementById('usr-role');
+      if (roleSelect) {
+        roleSelect.innerHTML = '';
+        roles.forEach(r => {
+           roleSelect.innerHTML += `<option value="${r}">${r}</option>`;
+        });
+      }
+      handleRoleAccessChange();
+    }
+
+    function handleRoleAccessChange() {
+      const roleVal = document.getElementById('usr-role').value;
+      const passWrap = document.getElementById('usr-pass-wrapper');
+      const passInput = document.getElementById('usr-pass');
+      const noAccessInfo = document.getElementById('usr-noaccess-info');
+      const isEdit = document.getElementById('usr-id').readOnly;
+
+      if (roleVal === 'No Access') {
+        passWrap.classList.add('hidden');
+        noAccessInfo.classList.remove('hidden');
+        passInput.value = '';
+        passInput.required = false;
+      } else {
+        passWrap.classList.remove('hidden');
+        noAccessInfo.classList.add('hidden');
+        passInput.required = !isEdit; // Wajib diisi saat tambah user baru yang punya akses
+      }
+    }
+
     function populateUserDropdowns() {
-      const divSet = new Set(allUsersCache.map(u => u.Divisi).filter(Boolean));
+      const { divs } = getOrgLists();
+      const divSet = new Set([...divs, ...allUsersCache.map(u => u.Divisi).filter(Boolean)]);
       const filterDiv = document.getElementById('filter-divisi');
       const filterKar = document.getElementById('filter-karyawan');
       const kpiEmp = document.getElementById('kpi-emp-select');
@@ -1970,22 +2217,139 @@
       google.script.run.withSuccessHandler(users => {
         hideLoader();
         allUsersCache = users;
+        const badgeCount = document.getElementById('user-total-badge');
+        if (badgeCount) badgeCount.innerText = users.length;
+
         const tbody = document.getElementById('table-users-body');
         tbody.innerHTML = '';
         users.forEach(u => {
+          const isNoAcc = u.Role === 'No Access';
+          const roleBadge = isNoAcc 
+            ? `<span class="px-2 py-0.5 rounded bg-red-100 text-red-700 font-bold text-[11px]">No Access</span>`
+            : `<span class="px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-bold text-[11px]">${u.Role}</span>`;
+
           tbody.innerHTML += `
             <tr class="hover:bg-slate-50 transition">
               <td class="p-3 font-medium">${u.Nama}<br><span class="text-xs text-slate-400">${u.ID_Karyawan}</span></td>
-              <td class="p-3 text-xs"><span class="font-semibold text-blue-600">${u.Role}</span><br>${u.Divisi}</td>
-              <td class="p-3 text-xs text-slate-600">WA: ${u.No_WA || '-'}<br>TG: ${u.Chat_ID_Telegram || '-'}<br>Email: ${u.Email || '-'}</td>
+              <td class="p-3 text-xs">${roleBadge}<div class="mt-1 text-slate-600">${u.Divisi}</div></td>
+              <td class="p-3 text-xs text-slate-600">WA: ${u.No_WA || '-'}<br>TG: ${u.Chat_ID_Telegram || u.Telegram_ID || '-'}<br>Email: ${u.Email || '-'}</td>
               <td class="p-3 text-right">
-                <button onclick="editUser('${u.ID_Karyawan}')" class="text-blue-600 hover:text-blue-800 text-xs font-bold mr-3 border border-blue-200 px-2 py-1 rounded bg-blue-50">Edit</button>
-                <button onclick="removeUser('${u.ID_Karyawan}')" class="text-red-600 hover:text-red-800 text-xs font-bold border border-red-200 px-2 py-1 rounded bg-red-50">Hapus</button>
+                <button onclick="editUser('${u.ID_Karyawan}')" class="text-blue-600 hover:text-blue-800 text-xs font-bold mr-2 border border-blue-200 px-2.5 py-1 rounded bg-blue-50">Edit</button>
+                <button onclick="removeUser('${u.ID_Karyawan}')" class="text-red-600 hover:text-red-800 text-xs font-bold border border-red-200 px-2.5 py-1 rounded bg-red-50">Hapus</button>
               </td>
             </tr>
           `;
         });
       }).getAllUsers();
+    }
+
+    function openAllUsersModal() {
+      const { divs, roles } = getOrgLists();
+      const allDivs = new Set([...divs, ...allUsersCache.map(u => u.Divisi).filter(Boolean)]);
+      const allRoles = new Set([...roles, ...allUsersCache.map(u => u.Role).filter(Boolean)]);
+
+      const selDiv = document.getElementById('modal-usr-filter-div');
+      selDiv.innerHTML = '<option value="ALL">Semua Divisi</option>';
+      allDivs.forEach(d => selDiv.innerHTML += `<option value="${d}">${d}</option>`);
+
+      const selRole = document.getElementById('modal-usr-filter-role');
+      selRole.innerHTML = '<option value="ALL">Semua Role / Hak Akses</option>';
+      allRoles.forEach(r => selRole.innerHTML += `<option value="${r}">${r}</option>`);
+
+      document.getElementById('modal-usr-search').value = '';
+      
+      // Hitung statistik ringkas
+      const total = allUsersCache.length;
+      const noAccessCount = allUsersCache.filter(u => String(u.Role).trim() === 'No Access').length;
+      document.getElementById('modal-usr-stat-total').innerText = total;
+      document.getElementById('modal-usr-stat-active').innerText = total - noAccessCount;
+      document.getElementById('modal-usr-stat-noaccess').innerText = noAccessCount;
+      document.getElementById('modal-usr-stat-div').innerText = allDivs.size;
+
+      renderAllUsersModalTable();
+      document.getElementById('modal-all-users').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeAllUsersModal() {
+      document.getElementById('modal-all-users').classList.add('hidden');
+    }
+
+    function renderAllUsersModalTable() {
+      const q = document.getElementById('modal-usr-search').value.toLowerCase().trim();
+      const fDiv = document.getElementById('modal-usr-filter-div').value;
+      const fRole = document.getElementById('modal-usr-filter-role').value;
+
+      const filtered = allUsersCache.filter(u => {
+        if (fDiv !== 'ALL' && u.Divisi !== fDiv) return false;
+        if (fRole !== 'ALL' && u.Role !== fRole) return false;
+        if (q) {
+          const hay = `${u.ID_Karyawan} ${u.Nama} ${u.Divisi} ${u.Role} ${u.No_WA || ''} ${u.Email || ''}`.toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
+        return true;
+      });
+
+      const tbody = document.getElementById('modal-all-users-tbody');
+      tbody.innerHTML = '';
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" class="p-6 text-center text-slate-400">Tidak ada data karyawan yang sesuai filter.</td></tr>`;
+        return;
+      }
+
+      filtered.forEach((u, idx) => {
+        const isNoAcc = String(u.Role).trim() === 'No Access';
+        const aksesBadge = isNoAcc
+          ? `<span class="px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold text-[11px]">Tidak Ada Akses</span>`
+          : `<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-semibold text-[11px]">Aktif Login</span>`;
+
+        tbody.innerHTML += `
+          <tr class="hover:bg-blue-50/50 transition">
+            <td class="p-3 text-center text-slate-500">${idx + 1}</td>
+            <td class="p-3 font-mono font-bold text-slate-700">${u.ID_Karyawan}</td>
+            <td class="p-3 font-semibold text-slate-900">${u.Nama}</td>
+            <td class="p-3 text-slate-700">${u.Divisi}</td>
+            <td class="p-3 font-medium text-blue-700">${u.Role}</td>
+            <td class="p-3 text-center">${aksesBadge}</td>
+            <td class="p-3 font-mono text-slate-600">${u.No_WA || '-'}</td>
+            <td class="p-3 font-mono text-slate-600">${u.Chat_ID_Telegram || u.Telegram_ID || '-'}</td>
+            <td class="p-3 text-slate-600">${u.Email || '-'}</td>
+            <td class="p-3 text-right">
+              <button onclick="closeAllUsersModal(); editUser('${u.ID_Karyawan}')" class="text-blue-600 hover:text-blue-800 font-bold px-2.5 py-1 rounded bg-blue-50 border border-blue-200">Edit</button>
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function exportAllUsersCSV() {
+      if (!allUsersCache || allUsersCache.length === 0) {
+        showToast('Tidak ada data untuk diunduh.');
+        return;
+      }
+      const headers = ['No', 'ID_Karyawan', 'Nama', 'Divisi', 'Role', 'Status_Akses', 'No_WA', 'Telegram_ID', 'Email'];
+      const rows = allUsersCache.map((u, idx) => [
+        idx + 1,
+        `"${u.ID_Karyawan || ''}"`,
+        `"${u.Nama || ''}"`,
+        `"${u.Divisi || ''}"`,
+        `"${u.Role || ''}"`,
+        `"${u.Role === 'No Access' ? 'Tidak Ada Akses' : 'Aktif Login'}"`,
+        `"${u.No_WA || ''}"`,
+        `"${u.Chat_ID_Telegram || u.Telegram_ID || ''}"`,
+        `"${u.Email || ''}"`
+      ].join(','));
+
+      const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows].join('\n');
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `Data_Karyawan_Keseluruhan_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showToast('Data karyawan keseluruhan berhasil diunduh (CSV)!');
     }
 
     function editUser(id) {
@@ -1998,18 +2362,30 @@
       idInput.classList.add('bg-slate-100', 'cursor-not-allowed', 'text-slate-500');
       
       document.getElementById('usr-nama').value = u.Nama;
-      document.getElementById('usr-role').value = u.Role;
-      document.getElementById('usr-divisi').value = u.Divisi;
+      
+      const roleSelect = document.getElementById('usr-role');
+      if (!Array.from(roleSelect.options).find(opt => opt.value === u.Role)) {
+        roleSelect.innerHTML += `<option value="${u.Role}">${u.Role}</option>`;
+      }
+      roleSelect.value = u.Role;
+      
+      const divSelect = document.getElementById('usr-divisi');
+      if (!Array.from(divSelect.options).find(opt => opt.value === u.Divisi)) {
+        divSelect.innerHTML += `<option value="${u.Divisi}">${u.Divisi}</option>`;
+      }
+      divSelect.value = u.Divisi;
+      
       document.getElementById('usr-wa').value = u.No_WA || '';
       document.getElementById('usr-tg').value = u.Chat_ID_Telegram || '';
       document.getElementById('usr-email').value = u.Email || '';
       document.getElementById('usr-pass').value = ''; 
       
+      handleRoleAccessChange();
+
       document.getElementById('btn-reset-user').classList.remove('hidden');
       document.getElementById('btn-submit-user').classList.remove('col-span-2');
-      document.getElementById('btn-submit-user').innerText = 'Perbarui Pengguna';
+      document.getElementById('btn-submit-user').innerText = 'Perbarui Data';
       
-      // Auto-scroll ke form (terutama untuk HP)
       document.getElementById('tab-users').scrollIntoView({ behavior: 'smooth' });
     }
 
@@ -2019,30 +2395,161 @@
       idInput.classList.remove('bg-slate-100', 'cursor-not-allowed', 'text-slate-500');
       
       document.getElementById('form-user').reset();
+      handleRoleAccessChange();
       document.getElementById('btn-reset-user').classList.add('hidden');
       document.getElementById('btn-submit-user').classList.add('col-span-2');
-      document.getElementById('btn-submit-user').innerText = 'Simpan Pengguna';
+      document.getElementById('btn-submit-user').innerHTML = '<i data-lucide="save" class="w-4 h-4"></i> Simpan Data Karyawan';
+      lucide.createIcons();
     }
 
     function submitUser(e) {
       e.preventDefault();
+      const roleVal = document.getElementById('usr-role').value;
       const payload = {
         ID_Karyawan: document.getElementById('usr-id').value,
-        Password: document.getElementById('usr-pass').value,
+        Password: roleVal === 'No Access' ? '' : document.getElementById('usr-pass').value,
         Nama: document.getElementById('usr-nama').value,
-        Role: document.getElementById('usr-role').value,
+        Role: roleVal,
         Divisi: document.getElementById('usr-divisi').value,
         No_WA: document.getElementById('usr-wa').value,
         Chat_ID_Telegram: document.getElementById('usr-tg').value,
         Email: document.getElementById('usr-email').value
       };
-      showLoader('Menyimpan pengguna...');
+      showLoader('Menyimpan data karyawan...');
       google.script.run.withSuccessHandler(res => {
         hideLoader();
         showToast(res.message);
-        resetUserForm(); // Kembalikan form ke state awal setelah sukses
+        resetUserForm();
         loadUsersTab();
       }).saveUser(payload);
+    }
+
+    // ==================== 5B. MASTER DIVISI & JABATAN ====================
+    function getOrgLists() {
+      const divStr = cachedSettings.DAFTAR_DIVISI || 'HR & GA, Sales & Marketing, IT & Digital, Finance, Operasional';
+      const roleStr = cachedSettings.DAFTAR_ROLE || 'Karyawan, Manajer, Super Admin, No Access';
+      const divs = divStr.split(',').map(s => s.trim()).filter(Boolean);
+      const roles = roleStr.split(',').map(s => s.trim()).filter(Boolean);
+      if (!roles.includes('No Access')) roles.push('No Access');
+      return { divs, roles };
+    }
+
+    function loadMasterOrgTab() {
+      const { divs, roles } = getOrgLists();
+      
+      const tbodyDiv = document.getElementById('table-master-divisi');
+      tbodyDiv.innerHTML = '';
+      divs.forEach((d, idx) => {
+        tbodyDiv.innerHTML += `
+          <tr class="hover:bg-slate-50">
+            <td class="p-3 font-medium text-slate-800">${d}</td>
+            <td class="p-3 text-right space-x-1">
+              <button onclick="editMasterOrgItem('DIVISI', ${idx})" class="text-blue-600 hover:text-blue-800 text-xs font-bold px-2 py-1 rounded bg-blue-50">Edit</button>
+              <button onclick="deleteMasterOrgItem('DIVISI', ${idx})" class="text-red-600 hover:text-red-800 text-xs font-bold px-2 py-1 rounded bg-red-50">Hapus</button>
+            </td>
+          </tr>
+        `;
+      });
+
+      const tbodyRole = document.getElementById('table-master-role');
+      tbodyRole.innerHTML = '';
+      const lockedRoles = ['Super Admin', 'Manajer', 'Karyawan', 'No Access'];
+      roles.forEach((r, idx) => {
+        const isLocked = lockedRoles.includes(r);
+        tbodyRole.innerHTML += `
+          <tr class="hover:bg-slate-50">
+            <td class="p-3 font-medium text-slate-800">
+              ${r} ${isLocked ? '<span class="ml-1 text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded">Sistem</span>' : ''}
+            </td>
+            <td class="p-3 text-right space-x-1">
+              ${isLocked ? '<span class="text-xs text-slate-400 italic">Terkunci</span>' : `
+                <button onclick="editMasterOrgItem('ROLE', ${idx})" class="text-indigo-600 hover:text-indigo-800 text-xs font-bold px-2 py-1 rounded bg-indigo-50">Edit</button>
+                <button onclick="deleteMasterOrgItem('ROLE', ${idx})" class="text-red-600 hover:text-red-800 text-xs font-bold px-2 py-1 rounded bg-red-50">Hapus</button>
+              `}
+            </td>
+          </tr>
+        `;
+      });
+    }
+
+    function editMasterOrgItem(type, idx) {
+      const { divs, roles } = getOrgLists();
+      if (type === 'DIVISI') {
+        document.getElementById('edit-divisi-idx').value = idx;
+        document.getElementById('input-divisi-name').value = divs[idx];
+        document.getElementById('btn-save-divisi').innerText = 'Update';
+        document.getElementById('btn-cancel-divisi').classList.remove('hidden');
+      } else {
+        document.getElementById('edit-role-idx').value = idx;
+        document.getElementById('input-role-name').value = roles[idx];
+        document.getElementById('btn-save-role').innerText = 'Update';
+        document.getElementById('btn-cancel-role').classList.remove('hidden');
+      }
+    }
+
+    function resetMasterOrgForm(type) {
+      if (type === 'DIVISI') {
+        document.getElementById('edit-divisi-idx').value = -1;
+        document.getElementById('input-divisi-name').value = '';
+        document.getElementById('btn-save-divisi').innerText = 'Tambah';
+        document.getElementById('btn-cancel-divisi').classList.add('hidden');
+      } else {
+        document.getElementById('edit-role-idx').value = -1;
+        document.getElementById('input-role-name').value = '';
+        document.getElementById('btn-save-role').innerText = 'Tambah';
+        document.getElementById('btn-cancel-role').classList.add('hidden');
+      }
+    }
+
+    function saveMasterOrgItem(e, type) {
+      e.preventDefault();
+      const { divs, roles } = getOrgLists();
+      if (type === 'DIVISI') {
+        const idx = parseInt(document.getElementById('edit-divisi-idx').value);
+        const val = document.getElementById('input-divisi-name').value.trim();
+        if (!val) return;
+        if (idx >= 0) divs[idx] = val;
+        else if (!divs.includes(val)) divs.push(val);
+        cachedSettings.DAFTAR_DIVISI = divs.join(', ');
+      } else {
+        const idx = parseInt(document.getElementById('edit-role-idx').value);
+        const val = document.getElementById('input-role-name').value.trim();
+        if (!val) return;
+        if (idx >= 0) roles[idx] = val;
+        else if (!roles.includes(val)) roles.push(val);
+        cachedSettings.DAFTAR_ROLE = roles.join(', ');
+      }
+
+      syncMasterOrgToServer(type);
+    }
+
+    function deleteMasterOrgItem(type, idx) {
+      showConfirm(`Hapus item ${type === 'DIVISI' ? 'Divisi' : 'Role/Jabatan'} ini?`, () => {
+        const { divs, roles } = getOrgLists();
+        if (type === 'DIVISI') {
+          divs.splice(idx, 1);
+          cachedSettings.DAFTAR_DIVISI = divs.join(', ');
+        } else {
+          roles.splice(idx, 1);
+          cachedSettings.DAFTAR_ROLE = roles.join(', ');
+        }
+        syncMasterOrgToServer(type);
+      });
+    }
+
+    function syncMasterOrgToServer(type) {
+      showLoader('Menyimpan perubahan...');
+      google.script.run.withSuccessHandler(res => {
+        hideLoader();
+        showToast('Daftar berhasil diperbarui!');
+        resetMasterOrgForm(type);
+        loadMasterOrgTab();
+        updateDynamicDropdowns();
+        populateUserDropdowns();
+      }).saveSettingsAPI({
+        DAFTAR_DIVISI: cachedSettings.DAFTAR_DIVISI,
+        DAFTAR_ROLE: cachedSettings.DAFTAR_ROLE
+      });
     }
 
     function removeUser(id) {
@@ -2088,6 +2595,7 @@
       google.script.run.withSuccessHandler(res => {
         hideLoader();
         showToast(res.message);
+        Object.assign(cachedSettings, payload);
       }).saveSettingsAPI(payload);
     }
   </script>
