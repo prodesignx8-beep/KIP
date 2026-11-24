@@ -1,0 +1,1807 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MyKinerja Cloud - Performance & KPI Management</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- html2pdf CDN untuk eksport PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #modal-rapor, #modal-rapor > div, #print-area, #print-area * { visibility: visible; }
+      #modal-rapor {
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+        align-items: flex-start !important;
+      }
+      #modal-rapor > div {
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        max-width: none !important;
+        width: 100% !important;
+      }
+      #print-area {
+        position: relative !important;
+        width: 100% !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        height: auto !important;
+      }
+      .no-print { display: none !important; }
+    }
+    
+    /* Modern Loader (Minimalist Spinner) */
+    .modern-loader {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #e2e8f0;
+      border-bottom-color: #2563eb;
+      border-radius: 50%;
+      display: inline-block;
+      box-sizing: border-box;
+      animation: rotation 1s linear infinite;
+    }
+    @keyframes rotation {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans antialiased">
+
+  <!-- GLOBAL LOADING OVERLAY -->
+  <div id="global-loader" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center transition-all duration-300">
+    <span class="modern-loader"></span>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 transform transition-all duration-300 translate-y-20 opacity-0 bg-slate-900 text-white px-5 py-3 rounded-lg shadow-xl flex items-center gap-3">
+    <span id="toast-msg" class="text-sm font-medium">Notifikasi</span>
+  </div>
+
+  <!-- ==================== 1. HALAMAN LOGIN ==================== -->
+  <div id="login-screen" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-indigo-900 to-slate-900 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+      <div class="text-center mb-6">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-blue-600 text-white mb-3 shadow-lg">
+          <i data-lucide="bar-chart-3" class="w-8 h-8"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-slate-900">MyKinerja Cloud</h2>
+        <p class="text-sm text-slate-500">Sistem Manajemen Kinerja & KPI</p>
+      </div>
+      
+      <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">ID Karyawan</label>
+          <input type="text" id="login-id" required placeholder="Contoh: EMP001" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+          <input type="password" id="login-pass" required placeholder="••••••••" class="w-full px-4 py-2.5 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 outline-none">
+        </div>
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg shadow transition flex items-center justify-center gap-2">
+          <span>Masuk ke Portal</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL KONFIRMASI KUSTOM ==================== -->
+  <div id="modal-confirm" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl max-w-sm w-full p-6 space-y-4">
+      <div class="flex items-center gap-3 text-amber-600">
+        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+        <h3 class="font-bold text-lg text-slate-900">Konfirmasi Tindakan</h3>
+      </div>
+      <p id="confirm-msg" class="text-sm text-slate-600">Apakah Anda yakin ingin melanjutkan?</p>
+      <div class="flex justify-end gap-2 pt-2">
+        <button id="confirm-cancel-btn" class="px-4 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100">Batal</button>
+        <button id="confirm-ok-btn" class="px-4 py-2 rounded-lg text-sm font-medium bg-red-600 hover:bg-red-700 text-white">Ya, Lanjutkan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== APP SHELL (DASHBOARD UTAMA) ==================== -->
+  <div id="app-shell" class="hidden min-h-screen flex bg-slate-50">
+    
+    <!-- SIDEBAR -->
+    <aside id="sidebar-nav" class="w-64 bg-slate-900 text-slate-300 flex-shrink-0 hidden md:flex flex-col h-screen sticky top-0 z-40">
+      <div class="p-5 flex items-center gap-3 border-b border-slate-800">
+        <div class="bg-blue-600 p-2 rounded-lg text-white"><i data-lucide="bar-chart-3" class="w-5 h-5"></i></div>
+        <h2 class="font-bold text-white text-lg tracking-wide">MyKinerja</h2>
+      </div>
+      <div class="p-4 border-b border-slate-800 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-white font-bold"><i data-lucide="user" class="w-5 h-5"></i></div>
+        <div>
+          <p id="nav-user-name" class="font-medium text-white text-sm">Nama User</p>
+          <p id="nav-user-role" class="text-xs text-slate-400">Role • Divisi</p>
+        </div>
+      </div>
+      <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
+        <button data-tab="dashboard" onclick="switchTab('dashboard')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-blue-600 text-white text-sm font-medium transition">
+          <i data-lucide="layout-dashboard" class="w-5 h-5"></i> Dashboard
+        </button>
+        <button data-tab="kpi" onclick="switchTab('kpi')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 text-sm font-medium transition">
+          <i data-lucide="target" class="w-5 h-5"></i> Target & Katalog KPI
+        </button>
+        <button data-tab="realisasi" onclick="switchTab('realisasi')" class="nav-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 text-sm font-medium transition">
+          <i data-lucide="check-square" class="w-5 h-5"></i> Realisasi & Aktivitas
+        </button>
+        <button data-tab="kompetensi" onclick="switchTab('kompetensi')" class="nav-btn role-mgr w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 text-sm font-medium transition">
+          <i data-lucide="star" class="w-5 h-5"></i> Nilai Kompetensi
+        </button>
+        <button data-tab="laporan" onclick="switchTab('laporan')" class="nav-btn role-mgr w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 text-sm font-medium transition">
+          <i data-lucide="send" class="w-5 h-5"></i> Kirim Laporan Massal
+        </button>
+        <button data-tab="users" onclick="switchTab('users')" class="nav-btn role-admin w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 text-sm font-medium transition">
+          <i data-lucide="users" class="w-5 h-5"></i> Manajemen Pengguna
+        </button>
+        <button data-tab="settings" onclick="switchTab('settings')" class="nav-btn role-admin w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-800 text-sm font-medium transition">
+          <i data-lucide="settings" class="w-5 h-5"></i> Pengaturan API
+        </button>
+      </nav>
+      <div class="p-4 border-t border-slate-800">
+        <button onclick="logout()" class="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-slate-800 hover:bg-red-600 hover:text-white text-sm font-medium transition">
+          <i data-lucide="log-out" class="w-4 h-4"></i> Keluar
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col h-screen overflow-hidden">
+      <!-- TOPBAR MOBILE -->
+      <header class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between md:hidden z-30">
+        <div class="flex items-center gap-2 text-blue-700 font-bold">
+          <i data-lucide="bar-chart-3" class="w-6 h-6"></i> MyKinerja
+        </div>
+        <button onclick="toggleMobileMenu()" class="text-slate-600 hover:text-slate-900"><i data-lucide="menu" class="w-6 h-6"></i></button>
+      </header>
+
+      <!-- CONTENT AREA -->
+      <div class="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
+        
+        <!-- DASHBOARD TAB -->
+        <section id="tab-dashboard" class="tab-section space-y-6">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-xl shadow-sm border border-slate-100">
+            <div>
+              <h2 class="text-xl font-bold text-slate-800">Dashboard Kinerja</h2>
+              <p class="text-sm text-slate-500">Analitik performa individu dan divisi.</p>
+            </div>
+            <div class="flex flex-wrap gap-2 items-center">
+              <select id="filter-range" onchange="handleFilterChange()" class="text-sm border border-slate-300 rounded-lg px-3 py-2 bg-slate-50 outline-none">
+                <option value="Harian">Harian</option>
+                <option value="Mingguan">Mingguan</option>
+                <option value="Bulanan" selected>Bulanan</option>
+                <option value="Tahunan">Tahunan</option>
+              </select>
+              <select id="filter-divisi" onchange="handleFilterChange()" class="text-sm border border-slate-300 rounded-lg px-3 py-2 bg-slate-50 outline-none"></select>
+              <select id="filter-karyawan" onchange="handleFilterChange()" class="text-sm border border-slate-300 rounded-lg px-3 py-2 bg-slate-50 outline-none"></select>
+              <button id="btn-toggle-dash" onclick="toggleDashboardData()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition shadow-sm flex items-center gap-2">
+                <i data-lucide="eye" class="w-4 h-4"></i> Tampilkan
+              </button>
+            </div>
+          </div>
+
+          <div id="dashboard-content" class="hidden space-y-6">
+            <!-- SUMMARY CARDS -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex items-center gap-4">
+                <div class="flex items-end gap-2">
+                  <h3 id="stat-overall" class="text-2xl font-bold text-slate-800">0%</h3>
+                  <span id="stat-overall-badge" class="mb-1"></span>
+                </div>
+              </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex items-center gap-4">
+              <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center"><i data-lucide="users" class="w-6 h-6"></i></div>
+              <div>
+                <p class="text-sm text-slate-500 font-medium">Karyawan Dievaluasi</p>
+                <h3 id="stat-emp-count" class="text-2xl font-bold text-slate-800">0</h3>
+              </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 flex items-center gap-4">
+              <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center"><i data-lucide="calendar" class="w-6 h-6"></i></div>
+              <div>
+                <p class="text-sm text-slate-500 font-medium">Periode Filter</p>
+                <h3 id="stat-periode" class="text-xl font-bold text-slate-800">-</h3>
+              </div>
+            </div>
+          </div>
+
+          <!-- CHARTS -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 lg:col-span-2">
+              <h3 class="text-sm font-bold text-slate-700 mb-4">Perbandingan Skor Individu</h3>
+              <div class="h-64"><canvas id="chart-individu"></canvas></div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5">
+              <h3 class="text-sm font-bold text-slate-700 mb-4">Rata-Rata per Divisi</h3>
+              <div class="h-64"><canvas id="chart-divisi"></canvas></div>
+            </div>
+          </div>
+
+          <!-- TABLE RAPOR -->
+          <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="p-4 border-b border-slate-100"><h3 class="text-sm font-bold text-slate-700">Detail Rapor Karyawan</h3></div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm text-left whitespace-nowrap">
+                <thead class="bg-slate-50 text-slate-600 font-medium border-b border-slate-200">
+                  <tr>
+                    <th class="p-3.5">Karyawan</th>
+                    <th class="p-3.5">Divisi</th>
+                    <th class="p-3.5 text-center">Skor KPI</th>
+                    <th class="p-3.5 text-center">Skor Kompetensi</th>
+                    <th class="p-3.5 text-center text-blue-700">Skor Akhir</th>
+                    <th class="p-3.5 text-center">Status</th>
+                    <th class="p-3.5 text-right">Aksi & Kirim Rapor</th>
+                  </tr>
+                </thead>
+                <tbody id="table-rapor-body" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+          </div>
+        </section>
+
+        <!-- KPI & KATALOG TAB -->
+        <section id="tab-kpi" class="tab-section hidden space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- FORM SET KPI -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 role-mgr lg:col-span-1">
+              <h3 class="text-sm font-bold text-slate-700 mb-4">Tetapkan Target KPI Baru</h3>
+              <form id="form-kpi" onsubmit="submitMasterKPI(event)" class="space-y-3 text-sm">
+                <div>
+                  <label class="block text-slate-600 mb-1">Karyawan</label>
+                  <select id="kpi-emp-select" required class="w-full border border-slate-300 rounded p-2"></select>
+                </div>
+                <div>
+                  <label class="block text-slate-600 mb-1">Indikator KPI</label>
+                  <input type="text" id="kpi-indikator" required class="w-full border border-slate-300 rounded p-2">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-slate-600 mb-1">Kategori</label>
+                    <select id="kpi-kategori" class="w-full border border-slate-300 rounded p-2">
+                      <option>Financial (BSC)</option>
+                      <option>Customer (BSC)</option>
+                      <option>Internal Process (BSC)</option>
+                      <option>Learning & Growth (BSC)</option>
+                      <option>OKR</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-slate-600 mb-1">Polaritas</label>
+                    <select id="kpi-polaritas" class="w-full border border-slate-300 rounded p-2">
+                      <option value="Maximize">Maximize (Makin besar bagus)</option>
+                      <option value="Minimize">Minimize (Makin kecil bagus)</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                  <div><label class="block text-slate-600 mb-1">Bobot %</label><input type="number" id="kpi-bobot" required class="w-full border border-slate-300 rounded p-2"></div>
+                  <div><label class="block text-slate-600 mb-1">Target</label><input type="number" step="0.01" id="kpi-target" required class="w-full border border-slate-300 rounded p-2"></div>
+                  <div><label class="block text-slate-600 mb-1">Satuan</label><input type="text" id="kpi-satuan" required class="w-full border border-slate-300 rounded p-2"></div>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white rounded p-2 font-medium mt-2">Simpan KPI</button>
+              </form>
+            </div>
+
+            <!-- TABEL MASTER KPI & KATALOG -->
+            <div class="lg:col-span-2 space-y-6">
+              <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 bg-indigo-50"><h3 class="text-sm font-bold text-indigo-900"><i data-lucide="book-open" class="w-4 h-4 inline-block mr-1"></i> Katalog Template KPI</h3></div>
+                <div class="overflow-x-auto max-h-64">
+                  <table class="w-full text-xs text-left whitespace-nowrap">
+                    <thead class="bg-slate-50 text-slate-600 sticky top-0 border-b border-slate-200">
+                      <tr><th class="p-2">Divisi</th><th class="p-2">Indikator</th><th class="p-2">Kategori</th><th class="p-2">Target</th><th class="p-2">Bobot</th><th class="p-2 text-right role-mgr">Aksi</th></tr>
+                    </thead>
+                    <tbody id="table-katalog-body" class="divide-y divide-slate-100"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                <div class="p-4 border-b border-slate-100"><h3 class="text-sm font-bold text-slate-700">Daftar Target KPI Aktif</h3></div>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-xs text-left whitespace-nowrap">
+                    <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                      <tr><th class="p-3">Karyawan</th><th class="p-3">Indikator KPI</th><th class="p-3">Kategori</th><th class="p-3 text-center">Bobot</th><th class="p-3 text-center">Target</th><th class="p-3 text-center">Polaritas</th><th class="p-3 text-right role-mgr">Aksi</th></tr>
+                    </thead>
+                    <tbody id="table-master-kpi-body" class="divide-y divide-slate-100"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- REALISASI & ACTIVITY TAB -->
+        <section id="tab-realisasi" class="tab-section hidden space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Form Realisasi -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5">
+              <h3 class="text-sm font-bold text-slate-700 mb-4">Input Realisasi Kerja</h3>
+              <form onsubmit="submitRealisasi(event)" class="space-y-3 text-sm">
+                <div class="grid grid-cols-2 gap-3">
+                  <div><label class="block text-slate-600 mb-1">Tanggal</label><input type="date" id="real-tanggal" required class="w-full border border-slate-300 rounded p-2"></div>
+                  <div><label class="block text-slate-600 mb-1">Nilai Realisasi Angka</label><input type="number" step="0.01" id="real-nilai" required class="w-full border border-slate-300 rounded p-2"></div>
+                </div>
+                <div><label class="block text-slate-600 mb-1">Pilih KPI</label><select id="real-kpi-select" required class="w-full border border-slate-300 rounded p-2"></select></div>
+                <div><label class="block text-slate-600 mb-1">Link Bukti (G-Drive/URL)</label><input type="url" id="real-bukti" placeholder="https://" class="w-full border border-slate-300 rounded p-2"></div>
+                <div><label class="block text-slate-600 mb-1">Catatan</label><input type="text" id="real-catatan" class="w-full border border-slate-300 rounded p-2"></div>
+                <button type="submit" class="w-full bg-emerald-600 text-white rounded p-2 font-medium">Kirim Laporan</button>
+              </form>
+            </div>
+            <!-- Form Activity Plan -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5">
+              <h3 class="text-sm font-bold text-slate-700 mb-4">Tambah Activity Plan (To-Do)</h3>
+              <form onsubmit="submitActivity(event)" class="space-y-3 text-sm">
+                <div><label class="block text-slate-600 mb-1">Rencana Aktivitas / Tugas</label><input type="text" id="act-rencana" required class="w-full border border-slate-300 rounded p-2"></div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div><label class="block text-slate-600 mb-1">Tenggat Waktu</label><input type="date" id="act-tenggat" required class="w-full border border-slate-300 rounded p-2"></div>
+                  <div><label class="block text-slate-600 mb-1">Prioritas</label><select id="act-prioritas" class="w-full border border-slate-300 rounded p-2"><option>High</option><option selected>Medium</option><option>Low</option></select></div>
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white rounded p-2 font-medium mt-2">Tambah Plan</button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Tabel Realisasi -->
+          <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden mt-6">
+            <div class="p-4 border-b border-slate-100"><h3 class="text-sm font-bold text-slate-700">Log Realisasi Kerja</h3></div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm text-left whitespace-nowrap">
+                <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                  <tr><th class="p-3">Tgl</th><th class="p-3">Karyawan</th><th class="p-3">Indikator KPI</th><th class="p-3 text-center">Capaian</th><th class="p-3">Bukti & Catatan</th><th class="p-3 text-center">Status</th><th class="p-3 text-right">Validasi</th></tr>
+                </thead>
+                <tbody id="table-realisasi-body" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Tabel Activity Plan -->
+          <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden mt-6">
+            <div class="p-4 border-b border-slate-100"><h3 class="text-sm font-bold text-slate-700">Daftar Activity Plan</h3></div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm text-left whitespace-nowrap">
+                <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                  <tr><th class="p-3">Karyawan</th><th class="p-3">Rencana Aktivitas</th><th class="p-3">Tenggat</th><th class="p-3">Prioritas</th><th class="p-3">Status Karyawan</th><th class="p-3">Approval Atasan</th></tr>
+                </thead>
+                <tbody id="table-activity-body" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- KOMPETENSI TAB -->
+        <section id="tab-kompetensi" class="tab-section hidden space-y-6">
+          <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 role-mgr max-w-2xl mx-auto">
+            <h3 class="text-sm font-bold text-slate-700 mb-4">Input Penilaian Kompetensi & Perilaku (Skala 1-5)</h3>
+            <form onsubmit="submitKompetensi(event)" class="space-y-4 text-sm">
+              <div class="grid grid-cols-2 gap-4">
+                <div><label class="block text-slate-600 mb-1">Periode (Bulan)</label><input type="month" id="komp-periode" required class="w-full border border-slate-300 rounded p-2"></div>
+                <div><label class="block text-slate-600 mb-1">Karyawan</label><select id="komp-emp-select" required class="w-full border border-slate-300 rounded p-2"></select></div>
+              </div>
+              <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                <div><label class="block text-xs mb-1 text-center">Integritas</label><input type="number" min="1" max="5" id="komp-1" required class="w-full border border-slate-300 rounded p-2 text-center" value="3"></div>
+                <div><label class="block text-xs mb-1 text-center">Kerjasama</label><input type="number" min="1" max="5" id="komp-2" required class="w-full border border-slate-300 rounded p-2 text-center" value="3"></div>
+                <div><label class="block text-xs mb-1 text-center">Kepemimpinan</label><input type="number" min="1" max="5" id="komp-3" required class="w-full border border-slate-300 rounded p-2 text-center" value="3"></div>
+                <div><label class="block text-xs mb-1 text-center">Inovasi</label><input type="number" min="1" max="5" id="komp-4" required class="w-full border border-slate-300 rounded p-2 text-center" value="3"></div>
+                <div><label class="block text-xs mb-1 text-center">Komunikasi</label><input type="number" min="1" max="5" id="komp-5" required class="w-full border border-slate-300 rounded p-2 text-center" value="3"></div>
+              </div>
+              <div><label class="block text-slate-600 mb-1">Catatan Atasan</label><textarea id="komp-catatan" class="w-full border border-slate-300 rounded p-2" rows="2"></textarea></div>
+              <button type="submit" class="w-full bg-blue-600 text-white rounded p-2 font-medium">Simpan Penilaian</button>
+            </form>
+          </div>
+
+          <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="p-4 border-b border-slate-100"><h3 class="text-sm font-bold text-slate-700">Riwayat Nilai Kompetensi</h3></div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-sm text-left whitespace-nowrap">
+                <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                  <tr><th class="p-3">Periode</th><th class="p-3">Karyawan</th><th class="p-3 text-center">Rata2 (1-5)</th><th class="p-3 text-center">Skor (0-100)</th><th class="p-3">Catatan Atasan</th><th class="p-3">Penilai</th></tr>
+                </thead>
+                <tbody id="table-kompetensi-body" class="divide-y divide-slate-100"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- KIRIM LAPORAN TAB -->
+        <section id="tab-laporan" class="tab-section hidden space-y-6">
+          <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 max-w-4xl mx-auto">
+            <h2 class="text-xl font-bold text-slate-800 mb-2">Pembuat Rekap Laporan Cerdas</h2>
+            <p class="text-sm text-slate-500 mb-6">Buat rekap kinerja (Harian/Bulanan/Tahunan) dan kirim langsung via aplikasi WhatsApp atau Telegram Anda.</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <!-- Filter Section -->
+              <div class="space-y-4 p-4 border border-slate-200 rounded-lg bg-slate-50">
+                <h3 class="font-bold text-slate-700">1. Filter & Target Data</h3>
+                <div>
+                  <label class="block text-xs font-medium text-slate-600 mb-1">Rentang Waktu Laporan</label>
+                  <select id="lap-range" class="w-full border border-slate-300 rounded p-2 text-sm outline-none focus:border-blue-500 bg-white">
+                    <option value="Harian">Harian</option>
+                    <option value="Mingguan">Mingguan</option>
+                    <option value="Bulanan" selected>Bulanan</option>
+                    <option value="Tahunan">Tahunan</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-600 mb-1">Berdasarkan Divisi</label>
+                  <select id="lap-divisi" onchange="updateLapKaryawanOptions()" class="w-full border border-slate-300 rounded p-2 text-sm outline-none focus:border-blue-500 bg-white"></select>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-600 mb-1">Berdasarkan Karyawan</label>
+                  <select id="lap-karyawan" class="w-full border border-slate-300 rounded p-2 text-sm outline-none focus:border-blue-500 bg-white"></select>
+                </div>
+                <button onclick="generateRecapText()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 rounded-lg mt-2 shadow text-sm flex items-center justify-center gap-2 transition">
+                  <i data-lucide="file-text" class="w-4 h-4"></i> Buat Teks Rekap
+                </button>
+              </div>
+
+              <!-- Channel & Send Section -->
+              <div class="space-y-4 p-4 border border-slate-200 rounded-lg bg-slate-50 flex flex-col">
+                <h3 class="font-bold text-slate-700">2. Hasil Rekap & Kirim (Native App)</h3>
+                <textarea id="lap-recap-result" rows="7" class="w-full flex-1 border border-slate-300 rounded p-2 text-xs font-mono bg-white outline-none" placeholder="Klik 'Buat Teks Rekap' di sebelah kiri, lalu teks akan muncul di sini siap dikirim..."></textarea>
+                <div class="grid grid-cols-2 gap-3 mt-2">
+                  <button onclick="sendRecapApp('WA')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg shadow flex items-center justify-center gap-2 transition text-sm">
+                    <i data-lucide="smartphone" class="w-4 h-4"></i> WhatsApp App
+                  </button>
+                  <button onclick="sendRecapApp('TG')" class="bg-sky-500 hover:bg-sky-600 text-white font-bold py-2.5 rounded-lg shadow flex items-center justify-center gap-2 transition text-sm">
+                    <i data-lucide="send" class="w-4 h-4"></i> Telegram App
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <div id="lap-status-container" class="mt-6 hidden">
+              <h3 class="font-bold text-slate-700 mb-2 border-b border-slate-200 pb-2">Log API Lama (Opsional)</h3>
+              <div id="lap-status-log" class="text-xs font-mono bg-slate-900 text-green-400 p-4 rounded-lg h-32 overflow-y-auto space-y-1">
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- USERS TAB -->
+        <section id="tab-users" class="tab-section hidden space-y-6">
+           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 lg:col-span-1">
+              <h3 class="text-sm font-bold text-slate-700 mb-4">Tambah / Edit Pengguna</h3>
+              <form id="form-user" onsubmit="submitUser(event)" class="space-y-3 text-sm">
+                <div><label class="block text-slate-600 mb-1">ID Karyawan</label><input type="text" id="usr-id" required class="w-full border border-slate-300 rounded p-2 transition-colors"></div>
+                <div><label class="block text-slate-600 mb-1">Nama Lengkap</label><input type="text" id="usr-nama" required class="w-full border border-slate-300 rounded p-2"></div>
+                <div><label class="block text-slate-600 mb-1">Password</label><input type="password" id="usr-pass" class="w-full border border-slate-300 rounded p-2" placeholder="Kosongkan jika tidak diubah"></div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div><label class="block text-slate-600 mb-1">Role</label><select id="usr-role" class="w-full border border-slate-300 rounded p-2"><option>Karyawan</option><option>Manajer</option><option>Super Admin</option></select></div>
+                  <div><label class="block text-slate-600 mb-1">Divisi</label><input type="text" id="usr-divisi" required class="w-full border border-slate-300 rounded p-2"></div>
+                </div>
+                <div><label class="block text-slate-600 mb-1">No WhatsApp</label><input type="text" id="usr-wa" placeholder="628..." class="w-full border border-slate-300 rounded p-2"></div>
+                <div><label class="block text-slate-600 mb-1">Chat ID Telegram</label><input type="text" id="usr-tg" class="w-full border border-slate-300 rounded p-2"></div>
+                <div><label class="block text-slate-600 mb-1">Email</label><input type="email" id="usr-email" class="w-full border border-slate-300 rounded p-2"></div>
+                
+                <div class="grid grid-cols-2 gap-2 mt-4" id="usr-btn-group">
+                  <button type="button" id="btn-reset-user" onclick="resetUserForm()" class="hidden w-full bg-slate-200 hover:bg-slate-300 text-slate-700 rounded p-2 font-medium transition text-xs">Batal / Baru</button>
+                  <button type="submit" id="btn-submit-user" class="col-span-2 w-full bg-slate-900 hover:bg-slate-800 text-white rounded p-2 font-medium transition text-sm">Simpan Pengguna</button>
+                </div>
+              </form>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden lg:col-span-2">
+              <div class="p-4 border-b border-slate-100"><h3 class="text-sm font-bold text-slate-700">Daftar Pengguna</h3></div>
+              <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left whitespace-nowrap">
+                  <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                    <tr><th class="p-3">Karyawan</th><th class="p-3">Role & Divisi</th><th class="p-3">Kontak Notifikasi</th><th class="p-3 text-right">Aksi</th></tr>
+                  </thead>
+                  <tbody id="table-users-body" class="divide-y divide-slate-100"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SETTINGS TAB -->
+        <section id="tab-settings" class="tab-section hidden space-y-6">
+          <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-5 max-w-3xl mx-auto">
+            <h3 class="text-lg font-bold text-slate-800 mb-1">Konfigurasi Sistem & API</h3>
+            <p class="text-sm text-slate-500 mb-6">Atur token bot, template pesan, dan bobot penilaian skor akhir.</p>
+            <form onsubmit="submitSettings(event)" class="space-y-6 text-sm">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Telegram -->
+                <div class="space-y-3 p-4 border border-blue-100 bg-blue-50/50 rounded-lg">
+                  <h4 class="font-bold text-blue-900 flex items-center gap-2"><i data-lucide="send" class="w-4 h-4"></i> Telegram Bot API</h4>
+                  <div><label class="block text-slate-600 mb-1">Bot Token</label><input type="text" id="set-tg-token" class="w-full border border-slate-300 rounded p-2 bg-white"></div>
+                  <div><label class="block text-slate-600 mb-1">Group Chat ID (Utk Rekap)</label><input type="text" id="set-tg-group" class="w-full border border-slate-300 rounded p-2 bg-white"></div>
+                </div>
+                <!-- WA -->
+                <div class="space-y-3 p-4 border border-emerald-100 bg-emerald-50/50 rounded-lg">
+                  <h4 class="font-bold text-emerald-900 flex items-center gap-2"><i data-lucide="smartphone" class="w-4 h-4"></i> WhatsApp Gateway API</h4>
+                  <div><label class="block text-slate-600 mb-1">API URL (Endpoint)</label><input type="url" id="set-wa-url" class="w-full border border-slate-300 rounded p-2 bg-white" placeholder="https://api.fonnte.com/send"></div>
+                  <div><label class="block text-slate-600 mb-1">API Key / Token</label><input type="text" id="set-wa-key" class="w-full border border-slate-300 rounded p-2 bg-white"></div>
+                  <div><label class="block text-slate-600 mb-1">WA Group ID (Utk Rekap)</label><input type="text" id="set-wa-group" class="w-full border border-slate-300 rounded p-2 bg-white"></div>
+                </div>
+              </div>
+              
+              <div class="p-4 border border-slate-200 rounded-lg space-y-4">
+                <h4 class="font-bold text-slate-900">Bobot Penilaian Kinerja</h4>
+                <div class="grid grid-cols-2 gap-4">
+                  <div><label class="block text-slate-600 mb-1">Bobot KPI (%)</label><input type="number" id="set-bobot-kpi" class="w-full border border-slate-300 rounded p-2" min="1" max="100"></div>
+                  <div><label class="block text-slate-600 mb-1">Bobot Kompetensi (%)</label><input type="number" id="set-bobot-komp" class="w-full border border-slate-300 rounded p-2" min="1" max="100"></div>
+                </div>
+                <p class="text-xs text-slate-500">Catatan: Total bobot harus 100%. Rumus: (Skor KPI x Bobot KPI) + (Skor Kompetensi x Bobot Kompetensi)</p>
+              </div>
+
+              <div class="p-4 border border-slate-200 rounded-lg">
+                <h4 class="font-bold text-slate-900 mb-2">Template Pesan Notifikasi (WA/Telegram)</h4>
+                <textarea id="set-template" rows="5" class="w-full border border-slate-300 rounded p-2 font-mono text-xs leading-relaxed" placeholder="Gunakan variabel: {nama}, {divisi}, {periode}, {skor_kpi}, {skor_kompetensi}, {skor}, {status}"></textarea>
+              </div>
+
+              <div class="text-right">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-6 py-2.5 font-medium transition shadow-sm">Simpan Konfigurasi</button>
+              </div>
+            </form>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- ==================== MODAL RAPOR PDF ==================== -->
+  <div id="modal-rapor" class="fixed inset-0 bg-slate-900/60 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50 no-print">
+        <h3 class="font-bold text-lg text-slate-800">Pratinjau Rapor Kinerja</h3>
+        <div class="space-x-2">
+          <button onclick="downloadPDF()" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"><i data-lucide="download" class="w-4 h-4 inline-block mr-1"></i> Unduh PDF</button>
+          <button onclick="window.print()" class="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-medium hover:bg-slate-700 transition"><i data-lucide="printer" class="w-4 h-4 inline-block mr-1"></i> Cetak</button>
+          <button onclick="closeRaporModal()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm font-medium hover:bg-slate-300 transition">Tutup</button>
+        </div>
+      </div>
+      <div id="print-area" class="p-8 overflow-y-auto flex-1 text-slate-800">
+        <div class="text-center mb-8 border-b-2 border-slate-800 pb-4">
+          <h1 class="text-2xl font-black uppercase tracking-wider">Laporan Evaluasi Kinerja Karyawan</h1>
+          <div class="flex justify-between text-sm mt-4 font-medium">
+            <span id="pdf-periode">Periode: -</span>
+            <span id="pdf-date">Dicetak: -</span>
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-6 mb-8 text-sm">
+          <div>
+            <table class="w-full">
+              <tr><td class="py-1 text-slate-500 w-24">Nama</td><td class="py-1 font-bold" id="pdf-nama">-</td></tr>
+              <tr><td class="py-1 text-slate-500">Divisi</td><td class="py-1 font-bold" id="pdf-divisi">-</td></tr>
+            </table>
+          </div>
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 text-center">
+            <div class="text-xs text-slate-500 font-semibold uppercase tracking-wider mb-1">Skor Akhir Kinerja</div>
+            <div id="pdf-skor-akhir" class="text-4xl font-black text-blue-700">0%</div>
+            <div id="pdf-status-badge" class="mt-2"></div>
+            <div class="mt-3 grid grid-cols-2 text-xs border-t border-slate-200 pt-2 text-left">
+              <div><span class="text-slate-500">KPI:</span> <strong id="pdf-skor-kpi" class="text-slate-900">0%</strong></div>
+              <div><span class="text-slate-500">Komp:</span> <strong id="pdf-skor-komp" class="text-slate-900">0%</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <h3 class="font-bold text-slate-800 mb-3 border-b border-slate-200 pb-1">Rincian Pencapaian KPI</h3>
+        <table class="w-full text-sm text-left mb-8 border border-slate-300">
+          <thead class="bg-slate-100 border-b border-slate-300">
+            <tr>
+              <th class="p-2 border-r border-slate-300">Indikator KPI</th>
+              <th class="p-2 border-r border-slate-300 text-center w-16">Bobot</th>
+              <th class="p-2 border-r border-slate-300 text-center w-24">Target</th>
+              <th class="p-2 border-r border-slate-300 text-center w-24">Realisasi</th>
+              <th class="p-2 text-center w-20">Capaian</th>
+            </tr>
+          </thead>
+          <tbody id="pdf-kpi-rows" class="divide-y divide-slate-300 border-b border-slate-300"></tbody>
+        </table>
+        
+        <div class="flex justify-between mt-16 pt-8 text-sm text-center">
+          <div class="w-48"><p class="mb-16">Dibuat Oleh,</p><p class="font-bold border-t border-slate-400 pt-1">Atasan Langsung / HR</p></div>
+          <div class="w-48"><p class="mb-16">Disetujui Oleh,</p><p class="font-bold border-t border-slate-400 pt-1">Karyawan Bersangkutan</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ==================== GAS STANDALONE URL BRIDGE & PREVIEW MOCK ====================
+    // Ganti teks "TEMPEL DISINI" dengan URL Web App Apps Script Anda (pastikan tetap di dalam tanda kutip)
+    const GAS_WEB_URL = "https://script.google.com/macros/s/AKfycbwr8gZ-ijfx6L5f-pKZixxrMCD633e4RjtpHPBje3jfDUbBbQZDQrtZ1tPkMFTiErr4/exec";
+    
+    const todayStr = new Date().toISOString().split('T')[0];
+    const mockDB = {
+      users: [
+        { ID_Karyawan: 'EMP001', Nama: 'Budi Santoso', Password: 'admin123', Role: 'Super Admin', Divisi: 'HR & GA', No_WA: '6281234567890', Chat_ID_Telegram: '123456789', Email: 'budi.hr@perusahaan.com' },
+        { ID_Karyawan: 'EMP002', Nama: 'Siti Aminah', Password: 'mgr123', Role: 'Manajer', Divisi: 'Sales & Marketing', No_WA: '6281234567891', Chat_ID_Telegram: '987654321', Email: 'siti.mgr@perusahaan.com' },
+        { ID_Karyawan: 'EMP003', Nama: 'Andi Wijaya', Password: 'emp123', Role: 'Karyawan', Divisi: 'Sales & Marketing', No_WA: '6281234567892', Chat_ID_Telegram: '456789123', Email: 'andi.sales@perusahaan.com' },
+        { ID_Karyawan: 'EMP004', Nama: 'Rina Kusuma', Password: 'emp123', Role: 'Karyawan', Divisi: 'IT & Digital', No_WA: '6281234567893', Chat_ID_Telegram: '789123456', Email: 'rina.it@perusahaan.com' }
+      ],
+      masterKPI: [
+        { KPI_ID: 'KPI-001', ID_Karyawan: 'EMP003', Nama_Karyawan: 'Andi Wijaya', Divisi: 'Sales & Marketing', Indikator: 'Pencapaian Omzet Penjualan Bulanan', Kategori: 'Financial (BSC)', Satuan: 'Juta Rp', Bobot: 50, Target: 250, Polaritas: 'Maximize' },
+        { KPI_ID: 'KPI-002', ID_Karyawan: 'EMP003', Nama_Karyawan: 'Andi Wijaya', Divisi: 'Sales & Marketing', Indikator: 'Akuisisi Klien Baru (B2B)', Kategori: 'Customer (BSC)', Satuan: 'Klien', Bobot: 30, Target: 10, Polaritas: 'Maximize' },
+        { KPI_ID: 'KPI-003', ID_Karyawan: 'EMP003', Nama_Karyawan: 'Andi Wijaya', Divisi: 'Sales & Marketing', Indikator: 'Tingkat Komplain Pelanggan', Kategori: 'Internal Process (BSC)', Satuan: 'Kasus', Bobot: 20, Target: 2, Polaritas: 'Minimize' },
+        { KPI_ID: 'KPI-004', ID_Karyawan: 'EMP004', Nama_Karyawan: 'Rina Kusuma', Divisi: 'IT & Digital', Indikator: 'Uptime Server & Aplikasi Utama', Kategori: 'Internal Process (BSC)', Satuan: '%', Bobot: 60, Target: 99.5, Polaritas: 'Maximize' },
+        { KPI_ID: 'KPI-005', ID_Karyawan: 'EMP004', Nama_Karyawan: 'Rina Kusuma', Divisi: 'IT & Digital', Indikator: 'Penyelesaian Tiket Bug Kritis', Kategori: 'Learning & Growth (OKR)', Satuan: 'Jam', Bobot: 40, Target: 4, Polaritas: 'Minimize' }
+      ],
+      katalogKPI: [
+        { Katalog_ID: 'KAT-01', Divisi: 'Sales & Marketing', Indikator: 'Pencapaian Omzet Penjualan Bulanan', Kategori: 'Financial (BSC)', Satuan: 'Juta Rp', Bobot_Saran: 50, Target_Saran: 250, Polaritas: 'Maximize' },
+        { Katalog_ID: 'KAT-02', Divisi: 'Sales & Marketing', Indikator: 'Akuisisi Klien Baru (B2B)', Kategori: 'Customer (BSC)', Satuan: 'Klien', Bobot_Saran: 30, Target_Saran: 10, Polaritas: 'Maximize' },
+        { Katalog_ID: 'KAT-03', Divisi: 'IT & Digital', Indikator: 'Uptime Server & Aplikasi Utama', Kategori: 'Internal Process (BSC)', Satuan: '%', Bobot_Saran: 60, Target_Saran: 99.5, Polaritas: 'Maximize' },
+        { Katalog_ID: 'KAT-04', Divisi: 'HR & GA', Indikator: 'Ketepatan Waktu Rekrutmen', Kategori: 'Internal Process (BSC)', Satuan: 'Hari', Bobot_Saran: 40, Target_Saran: 21, Polaritas: 'Minimize' }
+      ],
+      realisasi: [
+        { Log_ID: 'LOG-101', Tanggal: todayStr, ID_Karyawan: 'EMP003', Nama_Karyawan: 'Andi Wijaya', Divisi: 'Sales & Marketing', KPI_ID: 'KPI-001', Indikator: 'Pencapaian Omzet Penjualan Bulanan', Nilai_Realisasi: 235, Bukti_URL: 'https://drive.google.com', Catatan: 'Closing deal Q4', Status_Validasi: 'Approved', Validator: 'Siti Aminah' },
+        { Log_ID: 'LOG-102', Tanggal: todayStr, ID_Karyawan: 'EMP003', Nama_Karyawan: 'Andi Wijaya', Divisi: 'Sales & Marketing', KPI_ID: 'KPI-002', Indikator: 'Akuisisi Klien Baru (B2B)', Nilai_Realisasi: 9, Bukti_URL: 'https://drive.google.com', Catatan: '9 klien korporat baru', Status_Validasi: 'Approved', Validator: 'Siti Aminah' },
+        { Log_ID: 'LOG-103', Tanggal: todayStr, ID_Karyawan: 'EMP003', Nama_Karyawan: 'Andi Wijaya', Divisi: 'Sales & Marketing', KPI_ID: 'KPI-003', Indikator: 'Tingkat Komplain Pelanggan', Nilai_Realisasi: 1, Bukti_URL: '-', Catatan: '1 komplain pengiriman', Status_Validasi: 'Approved', Validator: 'Siti Aminah' },
+        { Log_ID: 'LOG-104', Tanggal: todayStr, ID_Karyawan: 'EMP004', Nama_Karyawan: 'Rina Kusuma', Divisi: 'IT & Digital', KPI_ID: 'KPI-004', Indikator: 'Uptime Server & Aplikasi Utama', Nilai_Realisasi: 99.8, Bukti_URL: 'https://drive.google.com', Catatan: 'Monitoring server stabil', Status_Validasi: 'Approved', Validator: 'Budi Santoso' }
+      ],
+      activities: [
+        { Plan_ID: 'ACT-01', ID_Karyawan: 'EMP003', Nama_Karyawan: 'Andi Wijaya', Divisi: 'Sales & Marketing', Rencana_Aktivitas: 'Follow-up 20 prospek leads pameran', Tenggat_Waktu: todayStr, Prioritas: 'High', Status: 'In Progress', Approval_Atasan: 'Approved' },
+        { Plan_ID: 'ACT-02', ID_Karyawan: 'EMP004', Nama_Karyawan: 'Rina Kusuma', Divisi: 'IT & Digital', Rencana_Aktivitas: 'Migrasi database & backup otomatis', Tenggat_Waktu: todayStr, Prioritas: 'High', Status: 'Done', Approval_Atasan: 'Approved' }
+      ],
+      kompetensi: [
+        { Nilai_ID: 'KOM-01', Periode: todayStr.slice(0, 7), ID_Karyawan: 'EMP003', Nama_Karyawan: 'Andi Wijaya', Divisi: 'Sales & Marketing', Rata_Rata_Skor: 4.4, Skor_Konversi_100: 88, Catatan_Atasan: 'Sangat proaktif mengejar target', Penilai: 'Siti Aminah' },
+        { Nilai_ID: 'KOM-02', Periode: todayStr.slice(0, 7), ID_Karyawan: 'EMP004', Nama_Karyawan: 'Rina Kusuma', Divisi: 'IT & Digital', Rata_Rata_Skor: 4.6, Skor_Konversi_100: 92, Catatan_Atasan: 'Respons cepat menangani insiden', Penilai: 'Budi Santoso' }
+      ],
+      settings: {
+        TELEGRAM_BOT_TOKEN: '1234567890:AAF_DEMO_TOKEN',
+        TELEGRAM_GROUP_ID: '-1001234567890',
+        WA_API_URL: 'https://api.fonnte.com/send',
+        WA_API_KEY: 'DEMO_FONNTE_KEY',
+        WA_GROUP_ID: '120363000000@g.us',
+        BOBOT_KPI: 70,
+        BOBOT_KOMPETENSI: 30,
+        TEMPLATE_PESAN: '*LAPORAN KINERJA ({periode})*\nNama: *{nama}*\nDivisi: {divisi}\nSkor Akhir: *{skor}%* ({status})'
+      }
+    };
+
+    const mockHandlers = {
+      loginUser(id, pass) {
+        const u = mockDB.users.find(x => x.ID_Karyawan.toLowerCase() === String(id).trim().toLowerCase() && x.Password === String(pass).trim());
+        if (!u) return { success: false, message: 'ID Karyawan atau Password salah! (Coba: EMP001 / admin123)' };
+        const safe = { ...u }; delete safe.Password;
+        return { success: true, user: safe };
+      },
+      getAllUsers() { return mockDB.users.map(u => { const c = { ...u }; delete c.Password; return c; }); },
+      saveUser(d) {
+        const idx = mockDB.users.findIndex(u => u.ID_Karyawan === d.ID_Karyawan);
+        if (idx >= 0) mockDB.users[idx] = { ...mockDB.users[idx], ...d, Password: d.Password || mockDB.users[idx].Password };
+        else mockDB.users.push({ ...d, Password: d.Password || '123456' });
+        return { success: true, message: '[Mode Demo Offline] Data karyawan disimpan.' };
+      },
+      deleteUser(id) {
+        mockDB.users = mockDB.users.filter(u => u.ID_Karyawan !== id);
+        return { success: true, message: '[Mode Demo Offline] Karyawan dihapus.' };
+      },
+      getKPIData() { return { masterKPI: mockDB.masterKPI, katalogKPI: mockDB.katalogKPI }; },
+      saveMasterKPI(k) {
+        mockDB.masterKPI.push({ ...k, KPI_ID: 'KPI-' + Math.floor(100 + Math.random() * 900) });
+        return { success: true, message: '[Mode Demo Offline] Target KPI ditambahkan.' };
+      },
+      deleteMasterKPI(id) {
+        mockDB.masterKPI = mockDB.masterKPI.filter(k => k.KPI_ID !== id);
+        return { success: true, message: '[Mode Demo Offline] Target KPI dihapus.' };
+      },
+      getRealisasiAndActivity() { return { realisasi: mockDB.realisasi, activities: mockDB.activities }; },
+      addRealisasiHarian(d) {
+        mockDB.realisasi.push({ ...d, Log_ID: 'LOG-' + Math.floor(100 + Math.random() * 900), Status_Validasi: 'Pending', Validator: '-' });
+        return { success: true, message: '[Mode Demo Offline] Realisasi dicatat.' };
+      },
+      validateRealisasi(logId, status, validator) {
+        const r = mockDB.realisasi.find(x => x.Log_ID === logId);
+        if (r) { r.Status_Validasi = status; r.Validator = validator; }
+        return { success: true, message: `[Mode Demo Offline] Realisasi di-${status}.` };
+      },
+      addActivityPlan(d) {
+        mockDB.activities.push({ ...d, Plan_ID: 'ACT-' + Math.floor(10 + Math.random() * 90), Status: 'To Do', Approval_Atasan: 'Pending' });
+        return { success: true, message: '[Mode Demo Offline] Activity Plan ditambahkan.' };
+      },
+      updateActivityStatus(planId, st, app) {
+        const a = mockDB.activities.find(x => x.Plan_ID === planId);
+        if (a) { if (st) a.Status = st; if (app) a.Approval_Atasan = app; }
+        return { success: true, message: '[Mode Demo Offline] Status diperbarui.' };
+      },
+      getKompetensiList() { return mockDB.kompetensi; },
+      savePenilaianKompetensi(d) {
+        const avg = Number(((+d.Integritas + +d.Kerjasama + +d.Kepemimpinan + +d.Inovasi + +d.Komunikasi) / 5).toFixed(2));
+        mockDB.kompetensi.push({ ...d, Nilai_ID: 'KOM-' + Math.floor(10 + Math.random() * 90), Rata_Rata_Skor: avg, Skor_Konversi_100: Number(((avg / 5) * 100).toFixed(2)) });
+        return { success: true, message: '[Mode Demo Offline] Nilai kompetensi disimpan.' };
+      },
+      getSettingsAPI() { return mockDB.settings; },
+      saveSettingsAPI(s) { Object.assign(mockDB.settings, s); return { success: true, message: '[Mode Demo Offline] Pengaturan disimpan.' }; },
+      sendManualReport(id, range, channel) {
+        const u = mockDB.users.find(x => x.ID_Karyawan === id);
+        return { success: true, message: `[Simulasi ${channel}] Rapor ${range} untuk ${u ? u.Nama : id} siap dikirim.` };
+      },
+      sendBulkReport(filters, channel) {
+        const analytics = this.getDashboardAnalytics(filters);
+        const reports = analytics.employeeReports;
+        if (reports.length === 0) return { success: false, message: 'Tidak ada karyawan yang cocok dengan filter.', logs: [] };
+        const logs = reports.map(r => `[SUKSES] ${channel} ke ${r.Nama} (${r.ID_Karyawan}) - Simulasi Selesai.`);
+        return { success: true, message: `Berhasil memproses pengiriman ke ${reports.length} karyawan via ${channel}.`, logs: logs };
+      },
+      getDashboardAnalytics(filters) {
+        const bobotKPI = Number(mockDB.settings.BOBOT_KPI || 70) / 100;
+        const bobotKomp = Number(mockDB.settings.BOBOT_KOMPETENSI || 30) / 100;
+        let targetUsers = mockDB.users.filter(u => u.Role !== 'Super Admin');
+        if (filters.divisi && filters.divisi !== 'ALL') targetUsers = targetUsers.filter(u => u.Divisi === filters.divisi);
+        if (filters.idKaryawan && filters.idKaryawan !== 'ALL') targetUsers = targetUsers.filter(u => u.ID_Karyawan === filters.idKaryawan);
+
+        const validRealisasi = mockDB.realisasi.filter(r => r.Status_Validasi === 'Approved');
+        const employeeReports = targetUsers.map(user => {
+          const uKPIs = mockDB.masterKPI.filter(k => k.ID_Karyawan === user.ID_Karyawan);
+          let totalSkorKPI = 0;
+          const kpiDetails = uKPIs.map(kpi => {
+            const logs = validRealisasi.filter(r => r.KPI_ID === kpi.KPI_ID);
+            const aktual = (kpi.Satuan === '%' || kpi.Polaritas === 'Minimize')
+              ? (logs.length ? Number(logs[logs.length - 1].Nilai_Realisasi) : 0)
+              : logs.reduce((s, x) => s + Number(x.Nilai_Realisasi), 0);
+            let pct = 0;
+            if (logs.length) {
+              pct = kpi.Polaritas === 'Minimize' ? (aktual <= kpi.Target ? 100 : (kpi.Target / aktual) * 100) : (aktual / kpi.Target) * 100;
+            }
+            pct = Math.min(120, Number(pct.toFixed(1)));
+            totalSkorKPI += (pct * Number(kpi.Bobot)) / 100;
+            return { ...kpi, Aktual: aktual, PencapaianPct: pct };
+          });
+          totalSkorKPI = Number(totalSkorKPI.toFixed(2));
+          const uKomp = mockDB.kompetensi.filter(k => k.ID_Karyawan === user.ID_Karyawan);
+          const skorKomp = uKomp.length ? Number(uKomp[uKomp.length - 1].Skor_Konversi_100) : 0;
+          const skorAkhir = Number(((totalSkorKPI * bobotKPI) + (skorKomp * bobotKomp)).toFixed(2));
+          const statusColor = skorAkhir >= 90 ? 'green' : (skorAkhir >= 70 ? 'yellow' : 'red');
+          const statusLabel = skorAkhir >= 90 ? 'Tercapai / Sangat Baik' : (skorAkhir >= 70 ? 'Cukup' : 'Kurang');
+          return {
+            ...user, Total_Skor_KPI: totalSkorKPI, Skor_Kompetensi: skorKomp,
+            Skor_Akhir: skorAkhir, Status_Color: statusColor, Status_Label: statusLabel, KPI_Details: kpiDetails
+          };
+        });
+
+        const divMap = {};
+        employeeReports.forEach(r => {
+          if (!divMap[r.Divisi]) divMap[r.Divisi] = { total: 0, count: 0 };
+          divMap[r.Divisi].total += r.Skor_Akhir;
+          divMap[r.Divisi].count += 1;
+        });
+        const divisionSummary = Object.keys(divMap).map(d => ({ divisi: d, rataRataSkor: Number((divMap[d].total / divMap[d].count).toFixed(2)) }));
+        const overallScore = employeeReports.length ? Number((employeeReports.reduce((s, r) => s + r.Skor_Akhir, 0) / employeeReports.length).toFixed(2)) : 0;
+        return { overallScore, totalEmployees: employeeReports.length, divisionSummary, employeeReports, rangeType: filters.rangeType };
+      }
+    };
+
+    // Universal Runner: Otomatis pakai fetch() jika URL Apps Script diisi, atau Mock jika kosong
+    const createRunner = (onSuccess, onFailure) => new Proxy({}, {
+      get(_, prop) {
+        if (prop === 'withSuccessHandler') return fn => createRunner(fn, onFailure);
+        if (prop === 'withFailureHandler') return fn => createRunner(onSuccess, fn);
+        return async (...args) => {
+          const webAppUrl = GAS_WEB_URL;
+          if (webAppUrl && webAppUrl.startsWith('http')) {
+            try {
+              const response = await fetch(webAppUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // text/plain menghindari CORS preflight di GAS
+                body: JSON.stringify({ action: prop, args: args })
+              });
+              const json = await response.json();
+              if (json.success) {
+                if (onSuccess) onSuccess(json.data);
+              } else {
+                hideLoader();
+                showToast('Error Server: ' + json.error);
+                if (onFailure) onFailure(new Error(json.error));
+              }
+            } catch (err) {
+              hideLoader();
+              showToast('Gagal terhubung ke URL Apps Script! Pastikan akses diset ke "Anyone".');
+              if (onFailure) onFailure(err);
+            }
+          } else {
+            // Fallback ke Mode Demo Lokal jika URL kosong
+            setTimeout(() => {
+              try {
+                const res = mockHandlers[prop](...args);
+                if (onSuccess) onSuccess(res);
+              } catch (err) {
+                if (onFailure) onFailure(err);
+              }
+            }, 200);
+          }
+        };
+      }
+    });
+
+    if (typeof window.google === 'undefined' || !window.google.script) {
+      window.google = { script: { run: createRunner(null, null) } };
+    }
+
+    let currentUser = null;
+    let allUsersCache = [];
+    let currentAnalyticsCache = null;
+    let chartIndividuInstance = null;
+    let chartDivisiInstance = null;
+    let cachedSettings = {};
+    let isDashboardVisible = false;
+
+    lucide.createIcons();
+
+    function showConfirm(message, onConfirm) {
+      const modal = document.getElementById('modal-confirm');
+      document.getElementById('confirm-msg').innerText = message;
+      modal.classList.remove('hidden');
+
+      const cleanup = () => {
+        modal.classList.add('hidden');
+        document.getElementById('confirm-ok-btn').onclick = null;
+        document.getElementById('confirm-cancel-btn').onclick = null;
+      };
+
+      document.getElementById('confirm-cancel-btn').onclick = cleanup;
+      document.getElementById('confirm-ok-btn').onclick = () => {
+        cleanup();
+        onConfirm();
+      };
+    }
+
+    function showLoader(text = '') {
+      document.getElementById('global-loader').classList.remove('hidden');
+    }
+
+    function hideLoader() {
+      document.getElementById('global-loader').classList.add('hidden');
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      document.getElementById('toast-msg').innerText = msg;
+      toast.classList.remove('translate-y-20', 'opacity-0');
+      setTimeout(() => {
+        toast.classList.add('translate-y-20', 'opacity-0');
+      }, 3500);
+    }
+
+    function toggleMobileMenu() {
+      document.getElementById('sidebar-nav').classList.toggle('hidden');
+    }
+
+    // ==================== LOGIN & RBAC ====================
+    function handleLogin(e) {
+      e.preventDefault();
+      
+      const isDemo = GAS_WEB_URL === "TEMPEL DISINI" || GAS_WEB_URL.trim() === "";
+
+      const id = document.getElementById('login-id').value;
+      const pass = document.getElementById('login-pass').value;
+      showLoader(!isDemo ? 'Menghubungkan ke Google Sheets...' : 'Memverifikasi akun (Mode Demo)...');
+
+      google.script.run.withSuccessHandler(res => {
+        hideLoader();
+        if (res && res.success) {
+          currentUser = res.user;
+          initAppAfterLogin();
+        } else {
+          showToast(res ? res.message : 'Gagal login');
+        }
+      }).loginUser(id, pass);
+    }
+
+    function initAppAfterLogin() {
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('app-shell').classList.remove('hidden');
+      document.getElementById('nav-user-name').innerText = currentUser.Nama;
+      document.getElementById('nav-user-role').innerText = `${currentUser.Role} • ${currentUser.Divisi}`;
+
+      // Set default date inputs
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('real-tanggal').value = today;
+      document.getElementById('act-tenggat').value = today;
+      document.getElementById('komp-periode').value = today.slice(0, 7);
+
+      // RBAC Visibility
+      const isAdmin = currentUser.Role === 'Super Admin';
+      const isMgr = currentUser.Role === 'Manajer' || isAdmin;
+
+      document.querySelectorAll('.role-admin').forEach(el => {
+        el.style.display = isAdmin ? '' : 'none';
+      });
+      document.querySelectorAll('.role-mgr').forEach(el => {
+        el.style.display = isMgr ? '' : 'none';
+      });
+
+      loadInitialMasterData();
+    }
+
+    function logout() {
+      currentUser = null;
+      document.getElementById('app-shell').classList.add('hidden');
+      document.getElementById('login-screen').classList.remove('hidden');
+    }
+
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-section').forEach(sec => sec.classList.add('hidden'));
+      document.getElementById('tab-' + tabName).classList.remove('hidden');
+
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white');
+        btn.classList.add('hover:bg-slate-800');
+      });
+      const activeBtn = document.querySelector(`.nav-btn[data-tab="${tabName}"]`);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-blue-600', 'text-white');
+        activeBtn.classList.remove('hover:bg-slate-800');
+      }
+
+      if (tabName === 'dashboard' && isDashboardVisible) loadDashboard();
+      else if (tabName === 'kpi') loadKPITab();
+      else if (tabName === 'realisasi') loadRealisasiTab();
+      else if (tabName === 'kompetensi') loadKompetensiTab();
+      else if (tabName === 'laporan') loadLaporanTab();
+      else if (tabName === 'users') loadUsersTab();
+      else if (tabName === 'settings') loadSettingsTab();
+    }
+
+    function loadInitialMasterData() {
+      let loadedCount = 0;
+      const checkDone = () => {
+        loadedCount++;
+        // Hanya memproses dropdown ketika semua API paralel selesai
+        if (loadedCount === 2) {
+          populateUserDropdowns();
+          // Hapus auto-load Dashboard di sini agar login terasa instan
+        }
+      };
+
+      // Tembak API Settings & API Users secara bersamaan (Parallel Execution)
+      google.script.run.withSuccessHandler(settings => {
+        cachedSettings = settings;
+        checkDone();
+      }).getSettingsAPI();
+
+      google.script.run.withSuccessHandler(users => {
+        allUsersCache = users;
+        checkDone();
+      }).getAllUsers();
+    }
+
+    function populateUserDropdowns() {
+      const divSet = new Set(allUsersCache.map(u => u.Divisi).filter(Boolean));
+      const filterDiv = document.getElementById('filter-divisi');
+      const filterKar = document.getElementById('filter-karyawan');
+      const kpiEmp = document.getElementById('kpi-emp-select');
+      const kompEmp = document.getElementById('komp-emp-select');
+      const lapDiv = document.getElementById('lap-divisi');
+
+      filterDiv.innerHTML = '<option value="ALL">Semua Divisi</option>';
+      lapDiv.innerHTML = '<option value="ALL">Semua Divisi</option>';
+      
+      divSet.forEach(d => {
+        filterDiv.innerHTML += `<option value="${d}">${d}</option>`;
+        lapDiv.innerHTML += `<option value="${d}">${d}</option>`;
+      });
+
+      filterKar.innerHTML = '<option value="ALL">Semua Karyawan</option>';
+      kpiEmp.innerHTML = '';
+      kompEmp.innerHTML = '';
+
+      allUsersCache.filter(u => u.Role !== 'Super Admin').forEach(u => {
+        filterKar.innerHTML += `<option value="${u.ID_Karyawan}">${u.Nama} (${u.Divisi})</option>`;
+        kpiEmp.innerHTML += `<option value="${u.ID_Karyawan}">${u.Nama} - ${u.Divisi}</option>`;
+        kompEmp.innerHTML += `<option value="${u.ID_Karyawan}">${u.Nama} - ${u.Divisi}</option>`;
+      });
+
+      updateLapKaryawanOptions(); // Update dependent dropdown for Lap. Massal
+
+      // Jika role Karyawan, kunci filter ke dirinya sendiri
+      if (currentUser.Role === 'Karyawan') {
+        filterKar.value = currentUser.ID_Karyawan;
+        filterKar.disabled = true;
+        filterDiv.disabled = true;
+      }
+    }
+
+    // ==================== 1. DASHBOARD ANALYTICS ====================
+    function toggleDashboardData() {
+      const content = document.getElementById('dashboard-content');
+      const btn = document.getElementById('btn-toggle-dash');
+      
+      if (!isDashboardVisible) {
+        content.classList.remove('hidden');
+        btn.innerHTML = '<i data-lucide="eye-off" class="w-4 h-4"></i> Sembunyikan';
+        btn.classList.replace('bg-blue-600', 'bg-slate-500');
+        btn.classList.replace('hover:bg-blue-700', 'hover:bg-slate-600');
+        isDashboardVisible = true;
+        lucide.createIcons();
+        loadDashboard(); // Load data berat ke backend HANYA saat tombol ditekan
+      } else {
+        content.classList.add('hidden');
+        btn.innerHTML = '<i data-lucide="eye" class="w-4 h-4"></i> Tampilkan';
+        btn.classList.replace('bg-slate-500', 'bg-blue-600');
+        btn.classList.replace('hover:bg-slate-600', 'hover:bg-blue-700');
+        isDashboardVisible = false;
+        lucide.createIcons();
+      }
+    }
+
+    function handleFilterChange() {
+      if (isDashboardVisible) {
+        loadDashboard();
+      }
+    }
+
+    function loadDashboard() {
+      const filters = {
+        divisi: document.getElementById('filter-divisi').value,
+        idKaryawan: document.getElementById('filter-karyawan').value,
+        rangeType: document.getElementById('filter-range').value
+      };
+
+      showLoader('Menghitung analitik KPI...');
+      google.script.run.withSuccessHandler(data => {
+        hideLoader();
+        currentAnalyticsCache = data;
+        renderDashboard(data);
+      }).getDashboardAnalytics(filters);
+    }
+
+    function renderDashboard(data) {
+      document.getElementById('stat-overall').innerText = data.overallScore + '%';
+      document.getElementById('stat-emp-count').innerText = data.totalEmployees;
+      document.getElementById('stat-periode').innerText = data.rangeType;
+
+      const badge = document.getElementById('stat-overall-badge');
+      if (data.overallScore >= 90) {
+        badge.className = 'text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700';
+        badge.innerText = 'Sangat Baik';
+      } else if (data.overallScore >= 70) {
+        badge.className = 'text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700';
+        badge.innerText = 'Cukup';
+      } else {
+        badge.className = 'text-xs px-2 py-0.5 rounded-full font-medium bg-red-100 text-red-700';
+        badge.innerText = 'Perlu Perhatian';
+      }
+
+      // Render Tabel Rapor
+      const tbody = document.getElementById('table-rapor-body');
+      tbody.innerHTML = '';
+      data.employeeReports.forEach(rep => {
+        const badgeCls = rep.Status_Color === 'green' ? 'bg-green-100 text-green-700' :
+                         (rep.Status_Color === 'yellow' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-700');
+
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50">
+            <td class="p-3.5 font-medium text-slate-900">${rep.Nama}<br><span class="text-xs text-slate-400">${rep.ID_Karyawan}</span></td>
+            <td class="p-3.5 text-slate-600">${rep.Divisi}</td>
+            <td class="p-3.5 text-center font-semibold">${rep.Total_Skor_KPI}%</td>
+            <td class="p-3.5 text-center font-semibold">${rep.Skor_Kompetensi}%</td>
+            <td class="p-3.5 text-center font-bold text-blue-700">${rep.Skor_Akhir}%</td>
+            <td class="p-3.5 text-center"><span class="px-2.5 py-1 rounded-full text-xs font-semibold ${badgeCls}">${rep.Status_Label}</span></td>
+            <td class="p-3.5 text-right space-x-1">
+              <button onclick="openRaporModal('${rep.ID_Karyawan}')" title="Lihat Rapor & PDF" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs font-medium">PDF</button>
+              <button onclick="sendDirectWA('${rep.ID_Karyawan}')" title="Kirim via WA App" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-medium">WA App</button>
+              <button onclick="sendDirectTG('${rep.ID_Karyawan}')" title="Kirim via TG App" class="px-2.5 py-1.5 bg-sky-500 hover:bg-sky-600 text-white rounded text-xs font-medium">TG App</button>
+            </td>
+          </tr>
+        `;
+      });
+
+      renderCharts(data);
+    }
+
+    function renderCharts(data) {
+      const ctxInd = document.getElementById('chart-individu').getContext('2d');
+      const ctxDiv = document.getElementById('chart-divisi').getContext('2d');
+
+      if (chartIndividuInstance) chartIndividuInstance.destroy();
+      if (chartDivisiInstance) chartDivisiInstance.destroy();
+
+      chartIndividuInstance = new Chart(ctxInd, {
+        type: 'bar',
+        data: {
+          labels: data.employeeReports.map(r => r.Nama),
+          datasets: [{
+            label: 'Skor Akhir (%)',
+            data: data.employeeReports.map(r => r.Skor_Akhir),
+            backgroundColor: data.employeeReports.map(r => r.Status_Color === 'green' ? '#16a34a' : (r.Status_Color === 'yellow' ? '#eab308' : '#dc2626')),
+            borderRadius: 6
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 110 } } }
+      });
+
+      chartDivisiInstance = new Chart(ctxDiv, {
+        type: 'doughnut',
+        data: {
+          labels: data.divisionSummary.map(d => d.divisi),
+          datasets: [{
+            data: data.divisionSummary.map(d => d.rataRataSkor),
+            backgroundColor: ['#2563eb', '#7c3aed', '#059669', '#d97706', '#db2777']
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+    }
+
+    function formatMsgFrontend(rep, range) {
+      let template = cachedSettings.TEMPLATE_PESAN || '*LAPORAN KINERJA ({periode})*\nNama: *{nama}*\nDivisi: {divisi}\nSkor Akhir: *{skor}%* ({status})';
+      template = template.replace(/%0A/g, '\n');
+      return template
+        .replace(/{nama}/g, rep.Nama)
+        .replace(/{divisi}/g, rep.Divisi)
+        .replace(/{periode}/g, range)
+        .replace(/{skor_kpi}/g, rep.Total_Skor_KPI)
+        .replace(/{skor_kompetensi}/g, rep.Skor_Kompetensi)
+        .replace(/{skor}/g, rep.Skor_Akhir)
+        .replace(/{status}/g, rep.Status_Label);
+    }
+
+    function sendDirectWA(idKaryawan) {
+      const rep = currentAnalyticsCache.employeeReports.find(r => r.ID_Karyawan === idKaryawan);
+      if (!rep) return;
+      const text = formatMsgFrontend(rep, currentAnalyticsCache.rangeType);
+      const phone = rep.No_WA ? rep.No_WA.replace(/[^0-9]/g, '') : '';
+      const url = phone ? `https://wa.me/${phone}?text=${encodeURIComponent(text)}` : `https://wa.me/?text=${encodeURIComponent(text)}`;
+      window.open(url, '_blank');
+    }
+
+    function sendDirectTG(idKaryawan) {
+      const rep = currentAnalyticsCache.employeeReports.find(r => r.ID_Karyawan === idKaryawan);
+      if (!rep) return;
+      const text = formatMsgFrontend(rep, currentAnalyticsCache.rangeType);
+      const url = `https://t.me/share/url?url=${encodeURIComponent(text)}`;
+      window.open(url, '_blank');
+    }
+
+    function triggerSendReport(idKaryawan, channel) {
+      const rangeType = document.getElementById('filter-range').value;
+      showLoader(`Mengirim rapor via ${channel}...`);
+      google.script.run.withSuccessHandler(res => {
+        hideLoader();
+        showToast(res.message);
+      }).sendManualReport(idKaryawan, rangeType, channel);
+    }
+
+    function openRaporModal(idKaryawan) {
+      const rep = currentAnalyticsCache.employeeReports.find(r => r.ID_Karyawan === idKaryawan);
+      if (!rep) return;
+
+      document.getElementById('pdf-periode').innerText = 'Periode: ' + currentAnalyticsCache.rangeType;
+      document.getElementById('pdf-date').innerText = 'Dicetak: ' + new Date().toLocaleDateString('id-ID');
+      document.getElementById('pdf-nama').innerText = `${rep.Nama} (${rep.ID_Karyawan})`;
+      document.getElementById('pdf-divisi').innerText = rep.Divisi;
+      document.getElementById('pdf-skor-akhir').innerText = rep.Skor_Akhir + '%';
+      document.getElementById('pdf-skor-kpi').innerText = rep.Total_Skor_KPI + '%';
+      document.getElementById('pdf-skor-komp').innerText = rep.Skor_Kompetensi + '%';
+
+      const badge = document.getElementById('pdf-status-badge');
+      badge.innerText = rep.Status_Label;
+      badge.className = `inline-block mt-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
+        rep.Status_Color === 'green' ? 'bg-green-100 text-green-700' : (rep.Status_Color === 'yellow' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-700')
+      }`;
+
+      const tbody = document.getElementById('pdf-kpi-rows');
+      tbody.innerHTML = '';
+      rep.KPI_Details.forEach(k => {
+        tbody.innerHTML += `
+          <tr>
+            <td class="p-2 border-r">${k.Indikator}</td>
+            <td class="p-2 border-r text-center">${k.Bobot}%</td>
+            <td class="p-2 border-r text-center">${k.Target} ${k.Satuan}</td>
+            <td class="p-2 border-r text-center">${k.Aktual} ${k.Satuan}</td>
+            <td class="p-2 text-center font-bold">${k.PencapaianPct}%</td>
+          </tr>
+        `;
+      });
+
+      document.getElementById('modal-rapor').classList.remove('hidden');
+    }
+
+    function closeRaporModal() {
+      document.getElementById('modal-rapor').classList.add('hidden');
+    }
+
+    function downloadPDF() {
+      const modal = document.getElementById('modal-rapor');
+      const modalBox = modal.children[0]; // Container putih modal
+      const printArea = document.getElementById('print-area');
+      
+      // 1. MANIPULASI DOM SEMENTARA
+      // Hapus sifat flexbox centering dari modal yang membuat html2canvas bingung (penyebab miring)
+      modal.classList.remove('items-center', 'justify-center', 'flex');
+      modal.classList.add('block');
+      
+      // Hapus batasan tinggi agar PDF ter-capture penuh dari atas ke bawah (tidak terpotong)
+      modalBox.classList.remove('max-h-[90vh]', 'overflow-hidden');
+      printArea.classList.remove('overflow-y-auto', 'flex-1');
+      
+      // Tetapkan proporsi lebar aman A4
+      modalBox.style.width = '800px';
+      modalBox.style.maxWidth = '100%';
+
+      const namaLengkap = document.getElementById('pdf-nama').innerText.split(' (')[0];
+      const periode = document.getElementById('pdf-periode').innerText.replace('Periode: ', '').trim();
+      const fileName = `Rapor_Kinerja_${namaLengkap.replace(/\s+/g, '_')}_${periode}.pdf`;
+
+      const opt = {
+        margin:       10, 
+        filename:     fileName,
+        image:        { type: 'jpeg', quality: 1.0 },
+        html2canvas:  { 
+          scale: 2, 
+          useCORS: true,
+          scrollY: 0, 
+          scrollX: 0
+        },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      showLoader('Mengekspor ke PDF...');
+
+      html2pdf().set(opt).from(printArea).save().then(() => {
+        // 2. KEMBALIKAN CSS KE SEMULA (RESTORE)
+        modal.classList.add('flex', 'items-center', 'justify-center');
+        modal.classList.remove('block');
+        
+        modalBox.classList.add('max-h-[90vh]', 'overflow-hidden');
+        printArea.classList.add('overflow-y-auto', 'flex-1');
+        modalBox.style.width = '';
+        modalBox.style.maxWidth = '';
+        
+        hideLoader();
+        showToast('PDF berhasil diunduh!');
+      }).catch(err => {
+        // Pastikan layout dikembalikan walau terjadi error
+        modal.classList.add('flex', 'items-center', 'justify-center');
+        modal.classList.remove('block');
+        modalBox.classList.add('max-h-[90vh]', 'overflow-hidden');
+        printArea.classList.add('overflow-y-auto', 'flex-1');
+        modalBox.style.width = '';
+        modalBox.style.maxWidth = '';
+        
+        hideLoader();
+        showToast('Terjadi kesalahan saat mengunduh PDF.');
+        console.error(err);
+      });
+    }
+
+    // ==================== FITUR KIRIM LAPORAN MASSAL ====================
+    function loadLaporanTab() {
+      updateLapKaryawanOptions();
+      document.getElementById('lap-status-container').classList.add('hidden');
+      document.getElementById('lap-status-log').innerHTML = '';
+    }
+
+    function updateLapKaryawanOptions() {
+      const div = document.getElementById('lap-divisi').value;
+      const lapKar = document.getElementById('lap-karyawan');
+      lapKar.innerHTML = '<option value="ALL">Semua Karyawan (Dari Divisi Terpilih)</option>';
+      
+      let filtered = allUsersCache.filter(u => u.Role !== 'Super Admin');
+      if (div !== 'ALL') {
+        filtered = filtered.filter(u => u.Divisi === div);
+      }
+      filtered.forEach(u => {
+        lapKar.innerHTML += `<option value="${u.ID_Karyawan}">${u.Nama} (${u.Divisi})</option>`;
+      });
+    }
+
+    function generateRecapText() {
+      const filters = {
+        rangeType: document.getElementById('lap-range').value,
+        divisi: document.getElementById('lap-divisi').value,
+        idKaryawan: document.getElementById('lap-karyawan').value
+      };
+      
+      showLoader('Membuat teks rekap...');
+      google.script.run.withSuccessHandler(data => {
+        hideLoader();
+        if(data.employeeReports.length === 0) {
+          showToast('Tidak ada data karyawan yang cocok.');
+          document.getElementById('lap-recap-result').value = '';
+          return;
+        }
+        
+        let recap = `*REKAP KINERJA TIM (${data.rangeType})*\n`;
+        recap += `Divisi: ${filters.divisi === 'ALL' ? 'Semua Divisi' : filters.divisi}\n`;
+        recap += `Rata-rata Skor: *${data.overallScore}%*\n\n`;
+        
+        data.employeeReports.forEach((rep, i) => {
+          const icon = rep.Status_Color === 'green' ? '🟢' : (rep.Status_Color === 'yellow' ? '🟡' : '🔴');
+          recap += `${i+1}. ${icon} *${rep.Nama}* (${rep.Divisi})\n`;
+          recap += `   KPI: ${rep.Total_Skor_KPI}% | Komp: ${rep.Skor_Kompetensi}%\n`;
+          recap += `   Akhir: *${rep.Skor_Akhir}%* (${rep.Status_Label})\n`;
+        });
+        
+        document.getElementById('lap-recap-result').value = recap;
+        showToast('Rekap berhasil dibuat! Silakan kirim.');
+      }).getDashboardAnalytics(filters);
+    }
+
+    function sendRecapApp(app) {
+      const text = document.getElementById('lap-recap-result').value;
+      if(!text) {
+        showToast('Buat teks rekap terlebih dahulu!');
+        return;
+      }
+      
+      let url = '';
+      if(app === 'WA') {
+        url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+      } else if (app === 'TG') {
+        url = `https://t.me/share/url?url=${encodeURIComponent(text)}`;
+      }
+      window.open(url, '_blank');
+    }
+
+    function executeBulkSend() {
+      const filters = {
+        rangeType: document.getElementById('lap-range').value,
+        divisi: document.getElementById('lap-divisi').value,
+        idKaryawan: document.getElementById('lap-karyawan').value
+      };
+      const channel = document.querySelector('input[name="lap-channel"]:checked').value;
+      
+      let targetText = filters.idKaryawan === 'ALL' ? (filters.divisi === 'ALL' ? 'Seluruh Karyawan' : 'Divisi ' + filters.divisi) : filters.idKaryawan;
+      
+      showConfirm(`Apakah Anda yakin ingin mengirim laporan kinerja ${filters.rangeType} ke ${targetText} via ${channel}?`, () => {
+        showLoader(`Memproses pengiriman via ${channel}...`);
+        const statusContainer = document.getElementById('lap-status-container');
+        const logBox = document.getElementById('lap-status-log');
+        
+        statusContainer.classList.remove('hidden');
+        logBox.innerHTML = `> Memulai proses broadcast via ${channel}...<br>`;
+        
+        google.script.run.withSuccessHandler(res => {
+          hideLoader();
+          showToast(res.message);
+          
+          if (res.logs && res.logs.length > 0) {
+            res.logs.forEach(l => logBox.innerHTML += `> ${l}<br>`);
+          } else {
+            logBox.innerHTML += `> ${res.message}<br>`;
+          }
+          logBox.scrollTop = logBox.scrollHeight;
+        }).sendBulkReport(filters, channel);
+      });
+    }
+
+    // ==================== 2. MANAJEMEN KPI & KATALOG ====================
+    function loadKPITab() {
+      showLoader('Memuat data KPI & Katalog...');
+      google.script.run.withSuccessHandler(data => {
+        hideLoader();
+        const katBody = document.getElementById('table-katalog-body');
+        katBody.innerHTML = '';
+        data.katalogKPI.forEach(k => {
+          const encoded = encodeURIComponent(JSON.stringify(k));
+          katBody.innerHTML += `
+            <tr class="hover:bg-slate-50">
+              <td class="p-2.5 font-medium">${k.Divisi}</td>
+              <td class="p-2.5">${k.Indikator}</td>
+              <td class="p-2.5 text-slate-500">${k.Kategori}</td>
+              <td class="p-2.5">${k.Target_Saran} ${k.Satuan}</td>
+              <td class="p-2.5">${k.Bobot_Saran}%</td>
+              <td class="p-2.5 text-right role-mgr">
+                <button onclick="copyFromKatalog('${encoded}')" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold px-2.5 py-1 rounded">
+                  + Salin
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+
+        const masterBody = document.getElementById('table-master-kpi-body');
+        masterBody.innerHTML = '';
+        let filteredKPI = data.masterKPI;
+        if (currentUser.Role === 'Karyawan') {
+          filteredKPI = filteredKPI.filter(m => m.ID_Karyawan === currentUser.ID_Karyawan);
+        }
+
+        filteredKPI.forEach(m => {
+          masterBody.innerHTML += `
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 font-medium">${m.Nama_Karyawan}<br><span class="text-xs text-slate-400">${m.Divisi}</span></td>
+              <td class="p-3">${m.Indikator}</td>
+              <td class="p-3 text-xs text-slate-500">${m.Kategori}</td>
+              <td class="p-3 text-center font-semibold">${m.Bobot}%</td>
+              <td class="p-3 text-center">${m.Target} ${m.Satuan}</td>
+              <td class="p-3 text-center text-xs">${m.Polaritas}</td>
+              <td class="p-3 text-right role-mgr">
+                <button onclick="removeMasterKPI('${m.KPI_ID}')" class="text-red-500 hover:text-red-700 text-xs font-medium">Hapus</button>
+              </td>
+            </tr>
+          `;
+        });
+      }).getKPIData();
+    }
+
+    function copyFromKatalog(encodedObj) {
+      const k = JSON.parse(decodeURIComponent(encodedObj));
+      document.getElementById('kpi-indikator').value = k.Indikator;
+      document.getElementById('kpi-kategori').value = k.Kategori;
+      document.getElementById('kpi-polaritas').value = k.Polaritas;
+      document.getElementById('kpi-bobot').value = k.Bobot_Saran;
+      document.getElementById('kpi-target').value = k.Target_Saran;
+      document.getElementById('kpi-satuan').value = k.Satuan;
+      showToast('Template disalin ke form! Pilih karyawan lalu klik Simpan.');
+    }
+
+    function submitMasterKPI(e) {
+      e.preventDefault();
+      const empId = document.getElementById('kpi-emp-select').value;
+      const emp = allUsersCache.find(u => u.ID_Karyawan === empId);
+
+      const payload = {
+        ID_Karyawan: emp.ID_Karyawan,
+        Nama_Karyawan: emp.Nama,
+        Divisi: emp.Divisi,
+        Indikator: document.getElementById('kpi-indikator').value,
+        Kategori: document.getElementById('kpi-kategori').value,
+        Polaritas: document.getElementById('kpi-polaritas').value,
+        Bobot: document.getElementById('kpi-bobot').value,
+        Target: document.getElementById('kpi-target').value,
+        Satuan: document.getElementById('kpi-satuan').value
+      };
+
+      showLoader('Menyimpan target KPI...');
+      google.script.run.withSuccessHandler(res => {
+        hideLoader();
+        showToast(res.message);
+        document.getElementById('form-kpi').reset();
+        loadKPITab();
+      }).saveMasterKPI(payload);
+    }
+
+    function removeMasterKPI(kpiId) {
+      showConfirm('Hapus target KPI ini?', () => {
+        showLoader('Menghapus KPI...');
+        google.script.run.withSuccessHandler(res => {
+          hideLoader();
+          showToast(res.message);
+          loadKPITab();
+        }).deleteMasterKPI(kpiId);
+      });
+    }
+
+    // ==================== 3. REALISASI & ACTIVITY PLAN ====================
+    function loadRealisasiTab() {
+      showLoader('Memuat log realisasi & aktivitas...');
+      google.script.run.withSuccessHandler(kpiData => {
+        const kpiSelect = document.getElementById('real-kpi-select');
+        kpiSelect.innerHTML = '';
+        const myKPIs = currentUser.Role === 'Karyawan'
+          ? kpiData.masterKPI.filter(k => k.ID_Karyawan === currentUser.ID_Karyawan)
+          : kpiData.masterKPI;
+
+        myKPIs.forEach(k => {
+          kpiSelect.innerHTML += `<option value="${k.KPI_ID}">${k.Indikator} (${k.Nama_Karyawan})</option>`;
+        });
+
+        google.script.run.withSuccessHandler(res => {
+          hideLoader();
+          const realBody = document.getElementById('table-realisasi-body');
+          realBody.innerHTML = '';
+          let logs = res.realisasi;
+          if (currentUser.Role === 'Karyawan') {
+            logs = logs.filter(l => l.ID_Karyawan === currentUser.ID_Karyawan);
+          }
+
+          logs.slice().reverse().forEach(r => {
+            const badge = r.Status_Validasi === 'Approved' ? 'bg-green-100 text-green-700' :
+                          (r.Status_Validasi === 'Rejected' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-800');
+            const isMgr = currentUser.Role === 'Manajer' || currentUser.Role === 'Super Admin';
+
+            realBody.innerHTML += `
+              <tr class="hover:bg-slate-50">
+                <td class="p-3 text-xs">${r.Tanggal}</td>
+                <td class="p-3 font-medium">${r.Nama_Karyawan}</td>
+                <td class="p-3">${r.Indikator}</td>
+                <td class="p-3 text-center font-bold">${r.Nilai_Realisasi}</td>
+                <td class="p-3 text-xs">
+                  ${r.Bukti_URL && r.Bukti_URL !== '-' ? `<a href="${r.Bukti_URL}" target="_blank" class="text-blue-600 underline">Lihat Bukti</a> • ` : ''}
+                  <span class="text-slate-600">${r.Catatan}</span>
+                </td>
+                <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-full text-xs font-semibold ${badge}">${r.Status_Validasi}</span></td>
+                <td class="p-3 text-right space-x-1 ${isMgr ? '' : 'hidden'}">
+                  <button onclick="approveRealisasi('${r.Log_ID}', 'Approved')" class="px-2 py-1 bg-green-600 text-white rounded text-xs">Approve</button>
+                  <button onclick="approveRealisasi('${r.Log_ID}', 'Rejected')" class="px-2 py-1 bg-red-600 text-white rounded text-xs">Reject</button>
+                </td>
+              </tr>
+            `;
+          });
+
+          // Render Activity Plan
+          const actBody = document.getElementById('table-activity-body');
+          actBody.innerHTML = '';
+          let acts = res.activities;
+          if (currentUser.Role === 'Karyawan') {
+            acts = acts.filter(a => a.ID_Karyawan === currentUser.ID_Karyawan);
+          }
+
+          acts.slice().reverse().forEach(a => {
+            const isMgr = currentUser.Role === 'Manajer' || currentUser.Role === 'Super Admin';
+            actBody.innerHTML += `
+              <tr class="hover:bg-slate-50">
+                <td class="p-3 font-medium">${a.Nama_Karyawan}</td>
+                <td class="p-3">${a.Rencana_Aktivitas}</td>
+                <td class="p-3 text-xs">${a.Tenggat_Waktu}</td>
+                <td class="p-3 text-xs font-semibold">${a.Prioritas}</td>
+                <td class="p-3">
+                  <select onchange="changeActivityStatus('${a.Plan_ID}', this.value, null)" class="text-xs border border-slate-300 rounded px-2 py-1">
+                    <option value="To Do" ${a.Status === 'To Do' ? 'selected' : ''}>To Do</option>
+                    <option value="In Progress" ${a.Status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                    <option value="Done" ${a.Status === 'Done' ? 'selected' : ''}>Done</option>
+                  </select>
+                </td>
+                <td class="p-3 text-xs">
+                  ${isMgr ? `
+                    <select onchange="changeActivityStatus('${a.Plan_ID}', null, this.value)" class="text-xs border border-slate-300 rounded px-2 py-1">
+                      <option value="Pending" ${a.Approval_Atasan === 'Pending' ? 'selected' : ''}>Pending</option>
+                      <option value="Approved" ${a.Approval_Atasan === 'Approved' ? 'selected' : ''}>Approved</option>
+                      <option value="Rejected" ${a.Approval_Atasan === 'Rejected' ? 'selected' : ''}>Rejected</option>
+                    </select>
+                  ` : `<span class="font-semibold">${a.Approval_Atasan}</span>`}
+                </td>
+              </tr>
+            `;
+          });
+        }).getRealisasiAndActivity();
+      }).getKPIData();
+    }
+
+    function submitRealisasi(e) {
+      e.preventDefault();
+      const kpiSelect = document.getElementById('real-kpi-select');
+      const kpiText = kpiSelect.options[kpiSelect.selectedIndex].text.split(' (')[0];
+
+      const payload = {
+        Tanggal: document.getElementById('real-tanggal').value,
+        ID_Karyawan: currentUser.ID_Karyawan,
+        Nama_Karyawan: currentUser.Nama,
+        Divisi: currentUser.Divisi,
+        KPI_ID: kpiSelect.value,
+        Indikator: kpiText,
+        Nilai_Realisasi: document.getElementById('real-nilai').value,
+        Bukti_URL: document.getElementById('real-bukti').value,
+        Catatan: document.getElementById('real-catatan').value
+      };
+
+      showLoader('Menyimpan realisasi...');
+      google.script.run.withSuccessHandler(res => {
+        hideLoader();
+        showToast(res.message);
+        document.getElementById('real-nilai').value = '';
+        document.getElementById('real-catatan').value = '';
+        loadRealisasiTab();
+      }).addRealisasiHarian(payload);
+    }
+
+    function approveRealisasi(logId, status) {
+      showLoader('Memvalidasi laporan...');
+      google.script.run.withSuccessHandler(res => {
+        hideLoader();
+        showToast(res.message);
+        loadRealisasiTab();
+      }).validateRealisasi(logId, status, currentUser.Nama);
+    }
+
+    function submitActivity(e) {
+      e.preventDefault();
+      const payload = {
+        ID_Karyawan: currentUser.ID_Karyawan,
+        Nama_Karyawan: currentUser.Nama,
+        Divisi: currentUser.Divisi,
+        Rencana_Aktivitas: document.getElementById('act-rencana').value,
+        Tenggat_Waktu: document.getElementById('act-tenggat').value,
+        Prioritas: document.getElementById('act-prioritas').value
+      };
+
+      showLoader('Menyimpan Activity Plan...');
+      google.script.run.withSuccessHandler(res => {
+        hideLoader();
+        showToast(res.message);
+        document.getElementById('act-rencana').value = '';
+        loadRealisasiTab();
+      }).addActivityPlan(payload);
+    }
+
+    function changeActivityStatus(planId, newStatus, approvalStatus) {
+      showLoader('Memperbarui status...');
+      google.script.run.withSuccessHandler(res => {
+        hideLoader();
+        showToast(res.message);
+      }).updateActivityStatus(planId, newStatus, approvalStatus);
+    }
+
+    // ==================== 4. KOMPETENSI ====================
+    function loadKompetensiTab() {
+      showLoader('Memuat data kompetensi...');
+      google.script.run.withSuccessHandler(list => {
+        hideLoader();
+        const tbody = document.getElementById('table-kompetensi-body');
+        tbody.innerHTML = '';
+        list.slice().reverse().forEach(k => {
+          tbody.innerHTML += `
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 text-xs">${k.Periode}</td>
+              <td class="p-3 font-medium">${k.Nama_Karyawan}<br><span class="text-xs text-slate-400">${k.Divisi}</span></td>
+              <td class="p-3 text-center font-semibold">${k.Rata_Rata_Skor} / 5</td>
+              <td class="p-3 text-center font-bold text-blue-600">${k.Skor_Konversi_100}%</td>
+              <td class="p-3 text-xs text-slate-600">${k.Catatan_Atasan}</td>
+              <td class="p-3 text-xs">${k.Penilai}</td>
+            </tr>
+          `;
+        });
+      }).getKompetensiList();
+    }
+
+    function submitKompetensi(e) {
+      e.preventDefault();
+      const empId = document.getElementById('komp-emp-select').value;
+      const emp = allUsersCache.find(u => u.ID_Karyawan === empId);
+
+      const payload = {
+        Periode: document.getElementById('komp-periode').value,
+        ID_Karyawan: emp.ID_Karyawan,
+        Nama_Karyawan: emp.Nama,
+        Divisi: emp.Divisi,
+        Integritas: document.getElementById('komp-1').value,
+        Kerjasama: document.getElementById('komp-2').value,
+        Kepemimpinan: document.getElementById('komp-3').value,
+        Inovasi: document.getElementById('komp-4').value,
+        Komunikasi: document.getElementById('komp-5').value,
+        Catatan_Atasan: document.getElementById('komp-catatan').value,
+        Penilai: currentUser.Nama
+      };
+
+      showLoader('Menyimpan nilai kompetensi...');
+      google.script.run.withSuccessHandler(res => {
+        hideLoader();
+        showToast(res.message);
+        loadKompetensiTab();
+      }).savePenilaianKompetensi(payload);
+    }
+
+    // ==================== 5. MANAJEMEN USERS ====================
+    function loadUsersTab() {
+      showLoader('Memuat daftar karyawan...');
+      google.script.run.withSuccessHandler(users => {
+        hideLoader();
+        allUsersCache = users;
+        const tbody = document.getElementById('table-users-body');
+        tbody.innerHTML = '';
+        users.forEach(u => {
+          tbody.innerHTML += `
+            <tr class="hover:bg-slate-50 transition">
+              <td class="p-3 font-medium">${u.Nama}<br><span class="text-xs text-slate-400">${u.ID_Karyawan}</span></td>
+              <td class="p-3 text-xs"><span class="font-semibold text-blue-600">${u.Role}</span><br>${u.Divisi}</td>
+              <td class="p-3 text-xs text-slate-600">WA: ${u.No_WA || '-'}<br>TG: ${u.Chat_ID_Telegram || '-'}<br>Email: ${u.Email || '-'}</td>
+              <td class="p-3 text-right">
+                <button onclick="editUser('${u.ID_Karyawan}')" class="text-blue-600 hover:text-blue-800 text-xs font-bold mr-3 border border-blue-200 px-2 py-1 rounded bg-blue-50">Edit</button>
+                <button onclick="removeUser('${u.ID_Karyawan}')" class="text-red-600 hover:text-red-800 text-xs font-bold border border-red-200 px-2 py-1 rounded bg-red-50">Hapus</button>
+              </td>
+            </tr>
+          `;
+        });
+      }).getAllUsers();
+    }
+
+    function editUser(id) {
+      const u = allUsersCache.find(x => x.ID_Karyawan === id);
+      if(!u) return;
+      
+      const idInput = document.getElementById('usr-id');
+      idInput.value = u.ID_Karyawan;
+      idInput.readOnly = true;
+      idInput.classList.add('bg-slate-100', 'cursor-not-allowed', 'text-slate-500');
+      
+      document.getElementById('usr-nama').value = u.Nama;
+      document.getElementById('usr-role').value = u.Role;
+      document.getElementById('usr-divisi').value = u.Divisi;
+      document.getElementById('usr-wa').value = u.No_WA || '';
+      document.getElementById('usr-tg').value = u.Chat_ID_Telegram || '';
+      document.getElementById('usr-email').value = u.Email || '';
+      document.getElementById('usr-pass').value = ''; 
+      
+      document.getElementById('btn-reset-user').classList.remove('hidden');
+      document.getElementById('btn-submit-user').classList.remove('col-span-2');
+      document.getElementById('btn-submit-user').innerText = 'Perbarui Pengguna';
+      
+      // Auto-scroll ke form (terutama untuk HP)
+      document.getElementById('tab-users').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function resetUserForm() {
+      const idInput = document.getElementById('usr-id');
+      idInput.readOnly = false;
+      idInput.classList.remove('bg-slate-100', 'cursor-not-allowed', 'text-slate-500');
+      
+      document.getElementById('form-user').reset();
+      document.getElementById('btn-reset-user').classList.add('hidden');
+      document.getElementById('btn-submit-user').classList.add('col-span-2');
+      document.getElementById('btn-submit-user').innerText = 'Simpan Pengguna';
+    }
+
+    function submitUser(e) {
+      e.preventDefault();
+      const payload = {
+        ID_Karyawan: document.getElementById('usr-id').value,
+        Password: document.getElementById('usr-pass').value,
+        Nama: document.getElementById('usr-nama').value,
+        Role: document.getElementById('usr-role').value,
+        Divisi: document.getElementById('usr-divisi').value,
+        No_WA: document.getElementById('usr-wa').value,
+        Chat_ID_Telegram: document.getElementById('usr-tg').value,
+        Email: document.getElementById('usr-email').value
+      };
+      showLoader('Menyimpan pengguna...');
+      google.script.run.withSuccessHandler(res => {
+        hideLoader();
+        showToast(res.message);
+        resetUserForm(); // Kembalikan form ke state awal setelah sukses
+        loadUsersTab();
+      }).saveUser(payload);
+    }
+
+    function removeUser(id) {
+      showConfirm('Hapus pengguna ini?', () => {
+        showLoader('Menghapus pengguna...');
+        google.script.run.withSuccessHandler(res => {
+          hideLoader();
+          showToast(res.message);
+          loadUsersTab();
+        }).deleteUser(id);
+      });
+    }
+
+    // ==================== 6. SETTINGS API ====================
+    function loadSettingsTab() {
+      showLoader('Memuat konfigurasi API...');
+      google.script.run.withSuccessHandler(s => {
+        hideLoader();
+        document.getElementById('set-tg-token').value = s.TELEGRAM_BOT_TOKEN || '';
+        document.getElementById('set-tg-group').value = s.TELEGRAM_GROUP_ID || '';
+        document.getElementById('set-wa-url').value = s.WA_API_URL || '';
+        document.getElementById('set-wa-key').value = s.WA_API_KEY || '';
+        document.getElementById('set-wa-group').value = s.WA_GROUP_ID || '';
+        document.getElementById('set-bobot-kpi').value = s.BOBOT_KPI || 70;
+        document.getElementById('set-bobot-komp').value = s.BOBOT_KOMPETENSI || 30;
+        document.getElementById('set-template').value = (s.TEMPLATE_PESAN || '').replace(/%0A/g, '\n');
+      }).getSettingsAPI();
+    }
+
+    function submitSettings(e) {
+      e.preventDefault();
+      const payload = {
+        TELEGRAM_BOT_TOKEN: document.getElementById('set-tg-token').value,
+        TELEGRAM_GROUP_ID: document.getElementById('set-tg-group').value,
+        WA_API_URL: document.getElementById('set-wa-url').value,
+        WA_API_KEY: document.getElementById('set-wa-key').value,
+        WA_GROUP_ID: document.getElementById('set-wa-group').value,
+        BOBOT_KPI: document.getElementById('set-bobot-kpi').value,
+        BOBOT_KOMPETENSI: document.getElementById('set-bobot-komp').value,
+        TEMPLATE_PESAN: document.getElementById('set-template').value
+      };
+      showLoader('Menyimpan konfigurasi...');
+      google.script.run.withSuccessHandler(res => {
+        hideLoader();
+        showToast(res.message);
+      }).saveSettingsAPI(payload);
+    }
+  </script>
+</body>
+</html>
